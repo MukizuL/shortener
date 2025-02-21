@@ -18,7 +18,7 @@ jobs:
 
   shortenertest:
     runs-on: ubuntu-latest
-    container: golang:1.22
+    container: golang:1.23
     needs: branchtest
 
     services:
@@ -40,7 +40,7 @@ jobs:
       - name: Download autotests binaries
         uses: robinraju/release-downloader@v1.8
         with:
-          repository: Yandex-Practicum/go-autotests
+          repository: MukizuL/go-autotests
           latest: true
           fileName: "*"
           out-file-path: .tools
