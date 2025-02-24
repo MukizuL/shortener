@@ -1,26 +1,24 @@
 package app
 
 import (
+	"github.com/MukizuL/shortener/internal/storage"
 	"log"
-	"math/rand"
 	"net/http"
 	"sync"
-	"time"
 )
 
+type repo interface {
+	Create(fullURL string) (string, error)
+	Get(ID string) (string, error)
+}
 type application struct {
-	storage    map[string]string
-	createdURL map[string]struct{}
-	m          sync.Mutex
-	seededRand *rand.Rand
+	storage repo
+	m       sync.Mutex
 }
 
 func Run() {
 	app := &application{
-		storage:    make(map[string]string),
-		createdURL: make(map[string]struct{}),
-
-		seededRand: rand.New(rand.NewSource(time.Now().UnixNano())),
+		storage: storage.New(),
 	}
 
 	mux := http.NewServeMux()

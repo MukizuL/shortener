@@ -1,7 +1,8 @@
 package app
 
 import (
-	"github.com/MukizuL/shortener/internal/helpers"
+	"errors"
+	"github.com/MukizuL/shortener/internal/errs"
 	"io"
 	"net/http"
 )
@@ -15,21 +16,16 @@ func (app *application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: validate URL
 
-	app.m.Lock()
+	shortURL, err := app.storage.Create(string(url))
+	if err != nil {
+		if errors.Is(err, errs.ErrDuplicate) {
+			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
+			return
+		}
 
-	if _, exist := app.createdURL[string(url)]; exist {
-		http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
-	app.createdURL[string(url)] = struct{}{}
-
-	ID := helpers.RandomString(app.seededRand, 6)
-	shortURL := "http://localhost:8080/" + ID
-
-	app.storage[ID] = string(url)
-
-	app.m.Unlock()
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -43,12 +39,18 @@ func (app *application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if val, exist := app.storage[ID]; !exist {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+	fullURL, err := app.storage.Get(ID)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
-	} else {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(val))
 	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fullURL))
 }
