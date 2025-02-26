@@ -5,18 +5,28 @@ import (
 	"github.com/MukizuL/shortener/internal/errs"
 	"io"
 	"net/http"
+	url2 "net/url"
 )
 
 func (app *application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
-	url, err := io.ReadAll(r.Body)
+	rawURL, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: validate URL
+	url, err := url2.ParseRequestURI(string(rawURL))
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		return
+	}
 
-	shortURL, err := app.storage.Create(string(url))
+	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	shortURL, err := app.storage.Create(url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -38,6 +48,8 @@ func (app *application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+
+	// TODO: validate URL
 
 	fullURL, err := app.storage.Get(ID)
 	if err != nil {

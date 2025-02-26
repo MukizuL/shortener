@@ -2,12 +2,11 @@ package helpers
 
 import (
 	"math/rand"
-	"time"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var seededRand = rand.New(rand.NewSource(2025))
 
 func RandomString(length int) string {
 	b := make([]byte, length)
