@@ -62,7 +62,5 @@ func (app *application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fullURL))
+	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
