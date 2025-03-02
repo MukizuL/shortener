@@ -84,6 +84,15 @@ func TestApplication_CreateShortURL(t *testing.T) {
 				shortURL:    "Unprocessable Entity\n",
 			},
 		},
+		{
+			name: "Empty URL",
+			body: "",
+			want: want{
+				contentType: "text/plain; charset=utf-8",
+				statusCode:  422,
+				shortURL:    "Unprocessable Entity\n",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -103,6 +112,67 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.want.shortURL, string(urlResult))
+		})
+	}
+}
+
+func TestApplication_GetFullURL(t *testing.T) {
+	type want struct {
+		statusCode int
+		fullURL    string
+	}
+
+	app := &application{
+		storage: &storageMock{make(map[string]struct{})},
+	}
+
+	tests := []struct {
+		name  string
+		query string
+		want  want
+	}{
+		{
+			name:  "Correct URL",
+			query: "qxDvSD",
+			want: want{
+				statusCode: 307,
+				fullURL:    "https://www.youtube.com",
+			},
+		},
+		{
+			name:  "Not present URL",
+			query: "qxDvSg",
+			want: want{
+				statusCode: 404,
+				fullURL:    "",
+			},
+		},
+		{
+			name:  "Empty URL",
+			query: "",
+			want: want{
+				statusCode: 400,
+				fullURL:    "",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			r.SetPathValue("id", tt.query)
+			w := httptest.NewRecorder()
+			app.GetFullURL(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.fullURL, result.Header.Get("Location"))
+
+			_, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
+			err = result.Body.Close()
+			require.NoError(t, err)
 		})
 	}
 }
