@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"github.com/MukizuL/shortener/internal/errs"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -160,7 +162,12 @@ func TestApplication_GetFullURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
-			r.SetPathValue("id", tt.query)
+
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("id", tt.query)
+
+			r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, rctx))
+
 			w := httptest.NewRecorder()
 			app.GetFullURL(w, r)
 
