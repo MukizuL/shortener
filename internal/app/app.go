@@ -1,9 +1,11 @@
 package app
 
 import (
+	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 )
@@ -22,12 +24,15 @@ func Run() {
 		storage: storage.New(),
 	}
 
+	params := config.GetParams()
+
 	r := chi.NewRouter()
 
-	r.Post("/", app.CreateShortURL)
-	r.Get("/{id}", app.GetFullURL)
+	r.Post(params.Base+"/", app.CreateShortURL)
+	r.Get(params.Base+"/{id}", app.GetFullURL)
 
-	err := http.ListenAndServe(":8080", r)
+	slog.Info("Server started on " + params.Addr)
+	err := http.ListenAndServe(params.Addr, r)
 	if err != nil {
 		log.Fatal(err)
 	}
