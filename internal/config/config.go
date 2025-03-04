@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"flag"
+	"github.com/caarlos0/env/v11"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -11,19 +13,30 @@ import (
 var ErrMalformedFlags = errors.New("error parsing flags")
 
 type Params struct {
-	Addr string
-	Base string
+	Addr string `env:"SERVER_ADDRESS"`
+	Base string `env:"BASE_URL"`
 }
 
+// GetParams fetches parameters, firstly from env variables, secondly from flags
 func GetParams() *Params {
 	result := &Params{}
 
-	flag.StringVar(&result.Addr, "a", "localhost:8080", "Sets server address.")
-	flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: string1/string2")
+	err := env.Parse(result)
+	if err != nil {
+		log.Fatal("Error parsing env variables")
+	}
+
+	if result.Addr == "" {
+		flag.StringVar(&result.Addr, "a", "localhost:8080", "Sets server address.")
+	}
+
+	if result.Base == "" {
+		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: string1/string2")
+	}
 
 	flag.Parse()
 
-	err := checkParams(result)
+	err = checkParams(result)
 	if err != nil {
 		flag.Usage()
 		os.Exit(1)
