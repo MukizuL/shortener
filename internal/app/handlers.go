@@ -5,6 +5,7 @@ import (
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/go-chi/chi/v5"
 	"io"
+	"log/slog"
 	"net/http"
 	url2 "net/url"
 )
@@ -38,14 +39,13 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = w.Write([]byte(shortURL))
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
+
+	_, err = w.Write([]byte(shortURL))
+	if err != nil {
+		slog.Error("Error in handler", "func", "CreateShortURL", "err", err.Error())
+	}
 }
 
 func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
