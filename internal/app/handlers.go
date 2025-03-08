@@ -9,7 +9,7 @@ import (
 	url2 "net/url"
 )
 
-func (app *application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
+func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	rawURL, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -27,7 +27,7 @@ func (app *application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := app.storage.Create(url.String())
+	shortURL, err := app.storage.CreateShortURL(url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -38,16 +38,17 @@ func (app *application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(shortURL))
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
 }
 
-func (app *application) GetFullURL(w http.ResponseWriter, r *http.Request) {
+func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	ID := chi.URLParam(r, "id")
 	if ID == "" {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -56,7 +57,7 @@ func (app *application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: validate URL
 
-	fullURL, err := app.storage.Get(ID)
+	fullURL, err := app.storage.GetLongURL(ID)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)

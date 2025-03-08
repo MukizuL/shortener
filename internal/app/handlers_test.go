@@ -17,7 +17,7 @@ type storageMock struct {
 	createdURL map[string]struct{}
 }
 
-func (m *storageMock) Create(fullURL string) (string, error) {
+func (m *storageMock) CreateShortURL(fullURL string) (string, error) {
 	if _, exist := m.createdURL[string(fullURL)]; exist {
 		return "", errs.ErrDuplicate
 	}
@@ -26,7 +26,7 @@ func (m *storageMock) Create(fullURL string) (string, error) {
 	return "http://localhost:8080/qxDvSD", nil
 }
 
-func (m *storageMock) Get(ID string) (string, error) {
+func (m *storageMock) GetLongURL(ID string) (string, error) {
 	if ID == "qxDvSD" {
 		return "https://www.youtube.com", nil
 	}
@@ -41,7 +41,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		shortURL    string
 	}
 
-	app := &application{
+	app := &Application{
 		storage: &storageMock{make(map[string]struct{})},
 	}
 
@@ -124,7 +124,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 		fullURL    string
 	}
 
-	app := &application{
+	app := &Application{
 		storage: &storageMock{make(map[string]struct{})},
 	}
 

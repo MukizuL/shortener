@@ -9,7 +9,7 @@ import (
 type MapStorage struct {
 	storage    map[string]string
 	createdURL map[string]struct{}
-	m          sync.Mutex
+	m          sync.RWMutex
 }
 
 func New() *MapStorage {
@@ -19,8 +19,9 @@ func New() *MapStorage {
 	}
 }
 
-func (r *MapStorage) Create(fullURL string) (string, error) {
+func (r *MapStorage) CreateShortURL(fullURL string) (string, error) {
 	r.m.Lock()
+	defer r.m.Unlock()
 
 	if _, exist := r.createdURL[string(fullURL)]; exist {
 		return "", errs.ErrDuplicate
@@ -33,12 +34,13 @@ func (r *MapStorage) Create(fullURL string) (string, error) {
 
 	r.storage[ID] = string(fullURL)
 
-	r.m.Unlock()
-
 	return shortURL, nil
 }
 
-func (r *MapStorage) Get(ID string) (string, error) {
+func (r *MapStorage) GetLongURL(ID string) (string, error) {
+	r.m.RLock()
+	defer r.m.RUnlock()
+
 	if val, exist := r.storage[ID]; !exist {
 		return "", errs.ErrNotFound
 	} else {

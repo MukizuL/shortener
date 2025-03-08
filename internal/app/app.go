@@ -1,38 +1,39 @@
 package app
 
 import (
+	"context"
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/storage"
-	"github.com/go-chi/chi/v5"
 	"log"
-	"log/slog"
-	"net/http"
-	"sync"
+	"os/signal"
+	"syscall"
 )
 
 type repo interface {
-	Create(fullURL string) (string, error)
-	Get(ID string) (string, error)
+	CreateShortURL(fullURL string) (string, error)
+	GetLongURL(ID string) (string, error)
 }
-type application struct {
+type Application struct {
 	storage repo
-	m       sync.Mutex
+}
+
+func NewApplication(storage repo) *Application {
+	return &Application{
+		storage: storage,
+	}
 }
 
 func Run() {
-	app := &application{
-		storage: storage.New(),
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	app := NewApplication(storage.New())
 
 	params := config.GetParams()
 
-	r := chi.NewRouter()
+	r := NewRouter(params.Base, app)
 
-	r.Post(params.Base+"/", app.CreateShortURL)
-	r.Get(params.Base+"/{id}", app.GetFullURL)
-
-	slog.Info("Server started on " + params.Addr)
-	err := http.ListenAndServe(params.Addr, r)
+	err := runServer(ctx, params.Addr, r)
 	if err != nil {
 		log.Fatal(err)
 	}
