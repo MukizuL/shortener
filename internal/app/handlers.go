@@ -55,8 +55,6 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: validate URL
-
 	fullURL, err := app.storage.GetLongURL(ID)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
