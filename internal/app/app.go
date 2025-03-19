@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/storage"
-	"log"
+	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
 )
@@ -15,11 +15,13 @@ type repo interface {
 }
 type Application struct {
 	storage repo
+	logger  *zap.Logger
 }
 
-func NewApplication(storage repo) *Application {
+func NewApplication(storage repo, logger *zap.Logger) *Application {
 	return &Application{
 		storage: storage,
+		logger:  logger,
 	}
 }
 
@@ -27,14 +29,20 @@ func Run() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	app := NewApplication(storage.New())
+	log, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	defer log.Sync()
+
+	app := NewApplication(storage.New(), log)
 
 	params := config.GetParams()
 
 	r := NewRouter(params.Base, app)
 
-	err := runServer(ctx, params.Addr, r)
+	err = runServer(ctx, params.Addr, r)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
