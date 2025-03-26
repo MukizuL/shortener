@@ -1,7 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -180,6 +183,104 @@ func TestApplication_GetFullURL(t *testing.T) {
 			require.NoError(t, err)
 			err = result.Body.Close()
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestApplication_CreateShortURLJSON(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		response    interface{}
+	}
+
+	app := &Application{
+		storage: &storageMock{make(map[string]struct{})},
+	}
+
+	tests := []struct {
+		name string
+		body string
+		want want
+	}{
+		{
+			name: "Correct working",
+			body: "https://www.youtube.com",
+			want: want{
+				contentType: "application/json",
+				statusCode:  201,
+				response:    dto.Response{Result: "http://localhost:8080/qxDvSD"},
+			},
+		},
+		{
+			name: "Duplicate URL",
+			body: "https://www.youtube.com",
+			want: want{
+				contentType: "application/json",
+				statusCode:  409,
+				response:    dto.ErrorResponse{Err: "Conflict"},
+			},
+		},
+		{
+			name: "Incorrect URL #1",
+			body: "https://",
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+				response:    dto.ErrorResponse{Err: "Bad Request"},
+			},
+		},
+		{
+			name: "Incorrect URL #2",
+			body: "www.something.ru",
+			want: want{
+				contentType: "application/json",
+				statusCode:  422,
+				response:    dto.ErrorResponse{Err: "Unprocessable Entity"},
+			},
+		},
+		{
+			name: "Empty URL",
+			body: "",
+			want: want{
+				contentType: "application/json",
+				statusCode:  422,
+				response:    dto.ErrorResponse{Err: "Unprocessable Entity"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := json.Marshal(&dto.Request{Url: tt.body})
+			require.NoError(t, err)
+
+			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
+			r.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			app.CreateShortURLJSON(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
+
+			switch tt.want.statusCode {
+			case http.StatusCreated:
+				var resp dto.Response
+				err = json.Unmarshal(body, &resp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.(dto.Response).Result, resp.Result)
+			default:
+				var errResp dto.ErrorResponse
+				err = json.Unmarshal(body, &errResp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.(dto.ErrorResponse).Err, errResp.Err)
+			}
 		})
 	}
 }
