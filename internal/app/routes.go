@@ -6,6 +6,7 @@ import (
 
 func NewRouter(baseURL string, app *Application) *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(app.gzipCompress)
 	r.Use(app.loggerMW)
 
 	r.Post(baseURL+"/", app.CreateShortURL)
