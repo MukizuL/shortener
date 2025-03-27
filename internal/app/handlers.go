@@ -80,7 +80,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	url, err := url2.ParseRequestURI(in.Url)
+	url, err := url2.ParseRequestURI(in.FullURL)
 	if err != nil {
 		helpers.WriteJSON(w, http.StatusUnprocessableEntity, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnprocessableEntity)})
 		return

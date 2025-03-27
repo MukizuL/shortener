@@ -1,7 +1,7 @@
 package dto
 
 type Request struct {
-	Url string `json:"url"`
+	FullURL string `json:"url"`
 }
 
 type Response struct {

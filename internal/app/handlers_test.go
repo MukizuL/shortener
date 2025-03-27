@@ -256,7 +256,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := json.Marshal(&dto.Request{Url: tt.body})
+			data, err := json.Marshal(&dto.Request{FullURL: tt.body})
 			require.NoError(t, err)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
