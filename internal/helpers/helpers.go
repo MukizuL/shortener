@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/http"
+	"time"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-var seededRand = rand.New(rand.NewSource(2025))
+var seededRand = rand.New(rand.NewSource(time.Now().Unix()))
 
 func RandomString(length int) string {
 	b := make([]byte, length)

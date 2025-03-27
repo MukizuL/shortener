@@ -6,6 +6,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -13,8 +14,9 @@ import (
 var ErrMalformedFlags = errors.New("error parsing flags")
 
 type Params struct {
-	Addr string `env:"SERVER_ADDRESS"`
-	Base string `env:"BASE_URL"`
+	Addr     string `env:"SERVER_ADDRESS"`
+	Base     string `env:"BASE_URL"`
+	Filepath string `env:"FILE_STORAGE_PATH"`
 }
 
 // GetParams fetches parameters, firstly from env variables, secondly from flags
@@ -32,6 +34,12 @@ func GetParams() *Params {
 
 	if result.Base == "" {
 		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: string1/string2")
+	}
+
+	absPath, _ := filepath.Abs("./storage.json")
+
+	if result.Filepath == "" {
+		flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
 	}
 
 	flag.Parse()
@@ -62,6 +70,15 @@ func checkParams(data *Params) error {
 		if string(data.Base[0]) == "/" || string(data.Base[len(data.Base)-1]) == "/" {
 			return ErrMalformedFlags
 		}
+	}
+
+	if !filepath.IsAbs(data.Filepath) {
+		temp, err := filepath.Abs(data.Filepath)
+		if err != nil {
+			return ErrMalformedFlags
+		}
+
+		data.Filepath = temp
 	}
 
 	return nil

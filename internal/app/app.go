@@ -12,6 +12,7 @@ import (
 type repo interface {
 	CreateShortURL(fullURL string) (string, error)
 	GetLongURL(ID string) (string, error)
+	OffloadStorage(filepath string) error
 }
 type Application struct {
 	storage repo
@@ -35,13 +36,18 @@ func Run() {
 	}
 	defer log.Sync()
 
-	app := NewApplication(storage.New(), log)
-
 	params := config.GetParams()
+
+	app := NewApplication(storage.New(params.Filepath), log)
 
 	r := NewRouter(params.Base, app)
 
 	err = runServer(ctx, params.Addr, r)
+	if err != nil {
+		panic(err)
+	}
+
+	err = app.storage.OffloadStorage(params.Filepath)
 	if err != nil {
 		panic(err)
 	}
