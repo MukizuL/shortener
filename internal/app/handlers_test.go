@@ -267,12 +267,12 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 
 			result := w.Result()
 
-			defer result.Body.Close()
-
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
 
 			body, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
+			err = result.Body.Close()
 			require.NoError(t, err)
 
 			switch tt.want.statusCode {
