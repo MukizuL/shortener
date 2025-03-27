@@ -37,6 +37,10 @@ func (m *storageMock) GetLongURL(ID string) (string, error) {
 	return "", errs.ErrNotFound
 }
 
+func (m *storageMock) OffloadStorage(filepath string) error {
+	return nil
+}
+
 func TestApplication_CreateShortURL(t *testing.T) {
 	type want struct {
 		contentType string
