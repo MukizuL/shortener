@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+//go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocksapp
+
 type repo interface {
 	CreateShortURL(fullURL string) (string, error)
 	GetLongURL(ID string) (string, error)
