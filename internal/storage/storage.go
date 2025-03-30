@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/MukizuL/shortener/internal/models"
@@ -17,7 +18,7 @@ type MapStorage struct {
 	m          sync.RWMutex
 }
 
-func New(filepath string) *MapStorage {
+func New(filepath string) (*MapStorage, error) {
 	storage := &MapStorage{
 		storage:    make(map[string]string),
 		createdURL: make(map[string]struct{}),
@@ -25,10 +26,10 @@ func New(filepath string) *MapStorage {
 
 	err := storage.LoadStorage(filepath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return storage
+	return storage, nil
 }
 
 func (r *MapStorage) CreateShortURL(fullURL string) (string, error) {
@@ -64,17 +65,18 @@ func (r *MapStorage) LoadStorage(filepath string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	file, err := os.OpenFile(filepath, os.O_RDONLY|os.O_CREATE, 0666)
-	if err != nil {
-		panic("Error opening file" + err.Error())
+	file, err := os.Open(filepath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
 	}
+
+	if err != nil {
+		return fmt.Errorf("open storage file: %w", err)
+	}
+
 	defer file.Close()
 
-	if _, err := file.Seek(0, 0); err != nil {
-		return err
-	}
-
-	var data []models.DataObject
+	var data []models.Urls
 	err = json.NewDecoder(file).Decode(&data)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
@@ -96,15 +98,15 @@ func (r *MapStorage) OffloadStorage(filepath string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		panic("Error opening file" + err.Error())
 	}
 	defer file.Close()
 
-	var data []models.DataObject
+	var data []models.Urls
 	for k, v := range r.storage {
-		data = append(data, models.DataObject{
+		data = append(data, models.Urls{
 			ShortURL:    k,
 			OriginalURL: v,
 		})

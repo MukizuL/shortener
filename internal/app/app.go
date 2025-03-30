@@ -26,29 +26,36 @@ func NewApplication(storage repo, logger *zap.Logger) *Application {
 	}
 }
 
-func Run() {
+func Run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	log, err := zap.NewDevelopment()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer log.Sync()
 
 	params := config.GetParams()
 
-	app := NewApplication(storage.New(params.Filepath), log)
+	repository, err := storage.New(params.Filepath)
+	if err != nil {
+		return err
+	}
+
+	app := NewApplication(repository, log)
 
 	r := NewRouter(params.Base, app)
 
 	err = runServer(ctx, params.Addr, r)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	err = app.storage.OffloadStorage(params.Filepath)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
