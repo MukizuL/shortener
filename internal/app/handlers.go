@@ -1,13 +1,16 @@
 package app
 
 import (
+	"encoding/json"
 	"errors"
+	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
+	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"log/slog"
 	"net/http"
-	url2 "net/url"
+	netUrl "net/url"
 )
 
 func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +20,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := url2.ParseRequestURI(string(rawURL))
+	url, err := netUrl.ParseRequestURI(string(rawURL))
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
@@ -67,4 +70,39 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
+}
+
+func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+	var req dto.Request
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	url, err := netUrl.ParseRequestURI(req.FullURL)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusUnprocessableEntity, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnprocessableEntity)})
+		return
+	}
+
+	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+		helpers.WriteJSON(w, http.StatusBadRequest, &dto.ErrorResponse{Err: http.StatusText(http.StatusBadRequest)})
+		return
+	}
+
+	shortURL, err := app.storage.CreateShortURL(url.String())
+	if err != nil {
+		if errors.Is(err, errs.ErrDuplicate) {
+			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
+			return
+		}
+
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	out := &dto.Response{Result: shortURL}
+
+	helpers.WriteJSON(w, http.StatusCreated, out)
 }

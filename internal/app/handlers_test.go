@@ -1,38 +1,22 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	mocksapp "github.com/MukizuL/shortener/internal/app/mocks"
+	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 )
-
-type storageMock struct {
-	createdURL map[string]struct{}
-}
-
-func (m *storageMock) CreateShortURL(fullURL string) (string, error) {
-	if _, exist := m.createdURL[string(fullURL)]; exist {
-		return "", errs.ErrDuplicate
-	}
-	m.createdURL[string(fullURL)] = struct{}{}
-
-	return "http://localhost:8080/qxDvSD", nil
-}
-
-func (m *storageMock) GetLongURL(ID string) (string, error) {
-	if ID == "qxDvSD" {
-		return "https://www.youtube.com", nil
-	}
-
-	return "", errs.ErrNotFound
-}
 
 func TestApplication_CreateShortURL(t *testing.T) {
 	type want struct {
@@ -41,18 +25,20 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		shortURL    string
 	}
 
-	app := &Application{
-		storage: &storageMock{make(map[string]struct{})},
-	}
-
 	tests := []struct {
-		name string
-		body string
-		want want
+		name      string
+		body      string
+		mockSetup func(m *mocksapp.Mockrepo)
+		want      want
 	}{
 		{
 			name: "Correct working",
 			body: "https://www.youtube.com",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					CreateShortURL("https://www.youtube.com").
+					Return("http://localhost:8080/qxDvSD", nil)
+			},
 			want: want{
 				contentType: "text/plain",
 				statusCode:  201,
@@ -62,6 +48,11 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		{
 			name: "Duplicate URL",
 			body: "https://www.youtube.com",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					CreateShortURL("https://www.youtube.com").
+					Return("", errs.ErrDuplicate)
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  409,
@@ -71,34 +62,31 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		{
 			name: "Incorrect URL #1",
 			body: "https://",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+
+			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  400,
 				shortURL:    "Bad Request\n",
 			},
 		},
-		{
-			name: "Incorrect URL #2",
-			body: "www.something.ru",
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  422,
-				shortURL:    "Unprocessable Entity\n",
-			},
-		},
-		{
-			name: "Empty URL",
-			body: "",
-			want: want{
-				contentType: "text/plain; charset=utf-8",
-				statusCode:  422,
-				shortURL:    "Unprocessable Entity\n",
-			},
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mocksapp.NewMockrepo(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockRepo)
+			}
+
+			app := &Application{
+				storage: mockRepo,
+			}
+
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			w := httptest.NewRecorder()
 			app.CreateShortURL(w, r)
@@ -124,18 +112,20 @@ func TestApplication_GetFullURL(t *testing.T) {
 		fullURL    string
 	}
 
-	app := &Application{
-		storage: &storageMock{make(map[string]struct{})},
-	}
-
 	tests := []struct {
-		name  string
-		query string
-		want  want
+		name      string
+		query     string
+		mockSetup func(m *mocksapp.Mockrepo)
+		want      want
 	}{
 		{
 			name:  "Correct URL",
 			query: "qxDvSD",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					GetLongURL("qxDvSD").
+					Return("https://www.youtube.com", nil)
+			},
 			want: want{
 				statusCode: 307,
 				fullURL:    "https://www.youtube.com",
@@ -144,6 +134,11 @@ func TestApplication_GetFullURL(t *testing.T) {
 		{
 			name:  "Not present URL",
 			query: "qxDvSg",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					GetLongURL("qxDvSg").
+					Return("", errs.ErrNotFound)
+			},
 			want: want{
 				statusCode: 404,
 				fullURL:    "",
@@ -152,6 +147,9 @@ func TestApplication_GetFullURL(t *testing.T) {
 		{
 			name:  "Empty URL",
 			query: "",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+
+			},
 			want: want{
 				statusCode: 400,
 				fullURL:    "",
@@ -161,6 +159,18 @@ func TestApplication_GetFullURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mocksapp.NewMockrepo(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockRepo)
+			}
+
+			app := &Application{
+				storage: mockRepo,
+			}
+
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
 
 			rctx := chi.NewRouteContext()
@@ -180,6 +190,134 @@ func TestApplication_GetFullURL(t *testing.T) {
 			require.NoError(t, err)
 			err = result.Body.Close()
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestApplication_CreateShortURLJSON(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		response    interface{}
+	}
+
+	tests := []struct {
+		name      string
+		body      string
+		mockSetup func(m *mocksapp.Mockrepo)
+		want      want
+	}{
+		{
+			name: "Correct working",
+			body: "https://www.youtube.com",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					CreateShortURL("https://www.youtube.com").
+					Return("http://localhost:8080/qxDvSD", nil)
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  201,
+				response:    dto.Response{Result: "http://localhost:8080/qxDvSD"},
+			},
+		},
+		{
+			name: "Duplicate URL",
+			body: "https://www.youtube.com",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+				m.EXPECT().
+					CreateShortURL("https://www.youtube.com").
+					Return("", errs.ErrDuplicate)
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  409,
+				response:    dto.ErrorResponse{Err: "Conflict"},
+			},
+		},
+		{
+			name: "Incorrect URL #1",
+			body: "https://",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  400,
+				response:    dto.ErrorResponse{Err: "Bad Request"},
+			},
+		},
+		{
+			name: "Incorrect URL #2",
+			body: "www.something.ru",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  422,
+				response:    dto.ErrorResponse{Err: "Unprocessable Entity"},
+			},
+		},
+		{
+			name: "Empty URL",
+			body: "",
+			mockSetup: func(m *mocksapp.Mockrepo) {
+
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  422,
+				response:    dto.ErrorResponse{Err: "Unprocessable Entity"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mocksapp.NewMockrepo(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockRepo)
+			}
+
+			app := &Application{
+				storage: mockRepo,
+			}
+
+			data, err := json.Marshal(&dto.Request{FullURL: tt.body})
+			require.NoError(t, err)
+
+			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
+			r.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			app.CreateShortURLJSON(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			body, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
+			err = result.Body.Close()
+			require.NoError(t, err)
+
+			switch tt.want.statusCode {
+			case http.StatusCreated:
+				var resp dto.Response
+				err = json.Unmarshal(body, &resp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.(dto.Response).Result, resp.Result)
+			default:
+				var errResp dto.ErrorResponse
+				err = json.Unmarshal(body, &errResp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.(dto.ErrorResponse).Err, errResp.Err)
+			}
 		})
 	}
 }

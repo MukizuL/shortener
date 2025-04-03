@@ -4,37 +4,60 @@ import (
 	"context"
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/storage"
-	"log"
+	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
 )
 
+//go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocksapp
+
 type repo interface {
 	CreateShortURL(fullURL string) (string, error)
 	GetLongURL(ID string) (string, error)
+	OffloadStorage(filepath string) error
 }
 type Application struct {
 	storage repo
+	logger  *zap.Logger
 }
 
-func NewApplication(storage repo) *Application {
+func NewApplication(storage repo, logger *zap.Logger) *Application {
 	return &Application{
 		storage: storage,
+		logger:  logger,
 	}
 }
 
-func Run() {
+func Run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	app := NewApplication(storage.New())
+	log, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
+	defer log.Sync()
 
 	params := config.GetParams()
 
+	repository, err := storage.New(params.Filepath)
+	if err != nil {
+		return err
+	}
+
+	app := NewApplication(repository, log)
+
 	r := NewRouter(params.Base, app)
 
-	err := runServer(ctx, params.Addr, r)
+	err = runServer(ctx, params.Addr, r)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	err = app.storage.OffloadStorage(params.Filepath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

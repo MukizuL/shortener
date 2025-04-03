@@ -1,7 +1,13 @@
 package main
 
-import "github.com/MukizuL/shortener/internal/app"
+import (
+	"github.com/MukizuL/shortener/internal/app"
+	"log"
+)
 
 func main() {
-	app.Run()
+	err := app.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
