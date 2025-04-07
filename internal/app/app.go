@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/MukizuL/shortener/internal/config"
-	"github.com/MukizuL/shortener/internal/storage/map_storage"
-	"github.com/MukizuL/shortener/internal/storage/pg_storage"
+	"github.com/MukizuL/shortener/internal/storage/mapstorage"
+	"github.com/MukizuL/shortener/internal/storage/pgstorage"
 	"github.com/golang-migrate/migrate/v4"
 	"path/filepath"
 
@@ -56,7 +56,7 @@ func Run() error {
 			return err
 		}
 
-		db, err := pg_storage.New(ctx, params.DSN)
+		db, err := pgstorage.New(ctx, params.DSN)
 		if err != nil {
 			return err
 		}
@@ -65,7 +65,7 @@ func Run() error {
 		repository = db
 
 	} else {
-		repository, err = map_storage.New(ctx, params.Filepath)
+		repository, err = mapstorage.New(ctx, params.Filepath)
 		if err != nil {
 			return err
 		}

@@ -1,4 +1,4 @@
-package map_storage
+package mapstorage
 
 import (
 	"context"
