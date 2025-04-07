@@ -36,7 +36,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
 			},
 			want: want{
@@ -50,7 +50,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "https://www.youtube.com").
 					Return("", errs.ErrDuplicate)
 			},
 			want: want{
@@ -123,7 +123,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			query: "qxDvSD",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					GetLongURL("qxDvSD").
+					GetLongURL(gomock.Any(), "qxDvSD").
 					Return("https://www.youtube.com", nil)
 			},
 			want: want{
@@ -136,7 +136,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			query: "qxDvSg",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					GetLongURL("qxDvSg").
+					GetLongURL(gomock.Any(), "qxDvSg").
 					Return("", errs.ErrNotFound)
 			},
 			want: want{
@@ -212,7 +212,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
 			},
 			want: want{
@@ -226,7 +226,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "https://www.youtube.com").
 					Return("", errs.ErrDuplicate)
 			},
 			want: want{

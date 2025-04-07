@@ -13,9 +13,13 @@ import (
 	"log/slog"
 	"net/http"
 	netUrl "net/url"
+	"time"
 )
 
 func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	rawURL, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -33,7 +37,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(url.String())
+	shortURL, err := app.storage.CreateShortURL(ctx, url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -54,13 +58,16 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	ID := chi.URLParam(r, "id")
 	if ID == "" {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
-	fullURL, err := app.storage.GetLongURL(ID)
+	fullURL, err := app.storage.GetLongURL(ctx, ID)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -75,6 +82,9 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	var req dto.Request
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -93,7 +103,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(url.String())
+	shortURL, err := app.storage.CreateShortURL(ctx, url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
@@ -110,7 +120,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	err := app.storage.Ping(ctx)

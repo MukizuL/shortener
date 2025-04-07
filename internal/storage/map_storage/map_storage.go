@@ -19,13 +19,13 @@ type MapStorage struct {
 	m          sync.RWMutex
 }
 
-func New(filepath string) (*MapStorage, error) {
+func New(ctx context.Context, filepath string) (*MapStorage, error) {
 	storage := &MapStorage{
 		storage:    make(map[string]string),
 		createdURL: make(map[string]struct{}),
 	}
 
-	err := storage.LoadStorage(filepath)
+	err := storage.LoadStorage(ctx, filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func New(filepath string) (*MapStorage, error) {
 	return storage, nil
 }
 
-func (r *MapStorage) CreateShortURL(fullURL string) (string, error) {
+func (r *MapStorage) CreateShortURL(ctx context.Context, fullURL string) (string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -51,7 +51,7 @@ func (r *MapStorage) CreateShortURL(fullURL string) (string, error) {
 	return shortURL, nil
 }
 
-func (r *MapStorage) GetLongURL(ID string) (string, error) {
+func (r *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	r.m.RLock()
 	defer r.m.RUnlock()
 
@@ -62,7 +62,7 @@ func (r *MapStorage) GetLongURL(ID string) (string, error) {
 	}
 }
 
-func (r *MapStorage) LoadStorage(filepath string) error {
+func (r *MapStorage) LoadStorage(ctx context.Context, filepath string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -95,7 +95,7 @@ func (r *MapStorage) LoadStorage(filepath string) error {
 	return nil
 }
 
-func (r *MapStorage) OffloadStorage(filepath string) error {
+func (r *MapStorage) OffloadStorage(ctx context.Context, filepath string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 

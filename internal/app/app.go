@@ -2,8 +2,15 @@ package app
 
 import (
 	"context"
+	"errors"
 	"github.com/MukizuL/shortener/internal/config"
-	"github.com/MukizuL/shortener/internal/storage/postgres"
+	"github.com/MukizuL/shortener/internal/storage/map_storage"
+	"github.com/MukizuL/shortener/internal/storage/pg_storage"
+	"github.com/golang-migrate/migrate/v4"
+	"path/filepath"
+
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
@@ -12,9 +19,9 @@ import (
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocksapp
 
 type repo interface {
-	CreateShortURL(fullURL string) (string, error)
-	GetLongURL(ID string) (string, error)
-	OffloadStorage(filepath string) error
+	CreateShortURL(ctx context.Context, fullURL string) (string, error)
+	GetLongURL(ctx context.Context, ID string) (string, error)
+	OffloadStorage(ctx context.Context, filepath string) error
 	Ping(ctx context.Context) error
 }
 
@@ -42,16 +49,29 @@ func Run() error {
 
 	params := config.GetParams()
 
-	repository, err := postgres.New(ctx, params.DSN)
-	if err != nil {
-		return err
-	}
-	defer repository.Close()
+	var repository repo
+	if params.DSN != "" {
+		err = Migrate(params.DSN)
+		if err != nil {
+			return err
+		}
 
-	//repository, err := map_storage.New(params.Filepath)
-	//if err != nil {
-	//	return err
-	//}
+		db, err := pg_storage.New(ctx, params.DSN)
+
+		defer db.Close()
+
+		if err != nil {
+			return err
+		}
+
+		repository = db
+
+	} else {
+		repository, err = map_storage.New(ctx, params.Filepath)
+		if err != nil {
+			return err
+		}
+	}
 
 	app := NewApplication(repository, log)
 
@@ -62,8 +82,29 @@ func Run() error {
 		return err
 	}
 
-	err = app.storage.OffloadStorage(params.Filepath)
+	err = app.storage.OffloadStorage(ctx, params.Filepath)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Migrate(DSN string) error {
+	_, err := filepath.Abs("./migrations")
+	if err != nil {
+		return err
+	}
+
+	m, err := migrate.New("file://migrations", DSN+"?sslmode=disable")
+
+	defer m.Close()
+
+	if err != nil {
+		return err
+	}
+
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
 	}
 
