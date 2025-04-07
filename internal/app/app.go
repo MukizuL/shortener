@@ -57,12 +57,10 @@ func Run() error {
 		}
 
 		db, err := pg_storage.New(ctx, params.DSN)
-
-		defer db.Close()
-
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 
 		repository = db
 
@@ -97,12 +95,10 @@ func Migrate(DSN string) error {
 	}
 
 	m, err := migrate.New("file://migrations", DSN+"?sslmode=disable")
-
-	defer m.Close()
-
 	if err != nil {
 		return err
 	}
+	defer m.Close()
 
 	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return err
