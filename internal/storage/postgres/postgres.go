@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"os"
 )
 
 type PGStorage struct {
@@ -31,7 +30,7 @@ func (P *PGStorage) Close() {
 }
 
 func New(ctx context.Context, dsn string) (*PGStorage, error) {
-	dbpool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	dbpool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}

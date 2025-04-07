@@ -10,6 +10,7 @@
 package mocksapp
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -81,4 +82,18 @@ func (m *Mockrepo) OffloadStorage(filepath string) error {
 func (mr *MockrepoMockRecorder) OffloadStorage(filepath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OffloadStorage", reflect.TypeOf((*Mockrepo)(nil).OffloadStorage), filepath)
+}
+
+// Ping mocks base method.
+func (m *Mockrepo) Ping(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockrepoMockRecorder) Ping(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*Mockrepo)(nil).Ping), ctx)
 }

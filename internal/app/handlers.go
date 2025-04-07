@@ -8,6 +8,7 @@ import (
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 	"io"
 	"log/slog"
 	"net/http"
@@ -114,6 +115,7 @@ func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
 
 	err := app.storage.Ping(ctx)
 	if err != nil {
+		app.logger.Error("Error in Ping handler", zap.Error(err))
 		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
 		return
 	}
