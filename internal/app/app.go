@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"github.com/MukizuL/shortener/internal/config"
-	"github.com/MukizuL/shortener/internal/storage"
+	"github.com/MukizuL/shortener/internal/storage/postgres"
 	"go.uber.org/zap"
 	"os/signal"
 	"syscall"
@@ -15,7 +15,9 @@ type repo interface {
 	CreateShortURL(fullURL string) (string, error)
 	GetLongURL(ID string) (string, error)
 	OffloadStorage(filepath string) error
+	Ping(ctx context.Context) error
 }
+
 type Application struct {
 	storage repo
 	logger  *zap.Logger
@@ -40,10 +42,16 @@ func Run() error {
 
 	params := config.GetParams()
 
-	repository, err := storage.New(params.Filepath)
+	repository, err := postgres.New(ctx, params.DSN)
 	if err != nil {
 		return err
 	}
+	defer repository.Close()
+
+	//repository, err := map_storage.New(params.Filepath)
+	//if err != nil {
+	//	return err
+	//}
 
 	app := NewApplication(repository, log)
 

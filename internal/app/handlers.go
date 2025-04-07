@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/MukizuL/shortener/internal/dto"
@@ -105,4 +106,19 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 	out := &dto.Response{Result: shortURL}
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
+}
+
+func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := app.storage.Ping(ctx)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	out := &dto.Response{Result: "Pong"}
+
+	helpers.WriteJSON(w, http.StatusOK, out)
 }

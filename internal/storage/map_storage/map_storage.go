@@ -1,6 +1,7 @@
-package storage
+package map_storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,5 +118,9 @@ func (r *MapStorage) OffloadStorage(filepath string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (r *MapStorage) Ping(ctx context.Context) error {
 	return nil
 }
