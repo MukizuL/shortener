@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"io"
-	"log/slog"
 	"net/http"
 	netUrl "net/url"
 	"time"
@@ -53,7 +52,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(shortURL))
 	if err != nil {
-		slog.Error("Error in handler", "func", "CreateShortURL", "err", err.Error())
+		app.logger.Error("Error in handler CreateShortURL", zap.Error(err))
 	}
 }
 
