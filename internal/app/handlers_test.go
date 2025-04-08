@@ -227,12 +227,12 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), "https://www.youtube.com").
-					Return("", errs.ErrDuplicate)
+					Return("http://localhost:8080/qxDvSD", errs.ErrDuplicate)
 			},
 			want: want{
 				contentType: "application/json",
 				statusCode:  409,
-				response:    dto.ErrorResponse{Err: "Conflict"},
+				response:    dto.Response{Result: "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
