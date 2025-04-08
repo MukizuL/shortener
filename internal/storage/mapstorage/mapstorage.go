@@ -16,7 +16,7 @@ import (
 
 type MapStorage struct {
 	storage    map[string]string
-	createdURL map[string]struct{}
+	createdURL map[string]string
 	m          sync.RWMutex
 	logger     *zap.Logger
 }
@@ -24,7 +24,7 @@ type MapStorage struct {
 func New(ctx context.Context, filepath string, logger *zap.Logger) (*MapStorage, error) {
 	storage := &MapStorage{
 		storage:    make(map[string]string),
-		createdURL: make(map[string]struct{}),
+		createdURL: make(map[string]string),
 		logger:     logger,
 	}
 
@@ -40,14 +40,14 @@ func (r *MapStorage) CreateShortURL(ctx context.Context, fullURL string) (string
 	r.m.Lock()
 	defer r.m.Unlock()
 
-	if _, exist := r.createdURL[fullURL]; exist {
-		return "", errs.ErrDuplicate
+	if v, exist := r.createdURL[fullURL]; exist {
+		return "http://localhost:8080/" + v, errs.ErrDuplicate
 	}
-
-	r.createdURL[fullURL] = struct{}{}
 
 	ID := helpers.RandomString(6)
 	shortURL := "http://localhost:8080/" + ID
+
+	r.createdURL[fullURL] = ID
 
 	r.storage[ID] = fullURL
 
@@ -65,10 +65,10 @@ func (r *MapStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchRe
 			return nil, errs.ErrDuplicate
 		}
 
-		r.createdURL[v.OriginalURL] = struct{}{}
-
 		ID := helpers.RandomString(6)
 		shortURL := "http://localhost:8080/" + ID
+
+		r.createdURL[v.OriginalURL] = ID
 
 		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: shortURL})
 
@@ -118,7 +118,7 @@ func (r *MapStorage) LoadStorage(ctx context.Context, filepath string) error {
 
 	for _, entry := range data {
 		r.storage[entry.ShortURL] = entry.OriginalURL
-		r.createdURL[entry.OriginalURL] = struct{}{}
+		r.createdURL[entry.OriginalURL] = entry.ShortURL
 	}
 
 	return nil

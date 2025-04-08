@@ -307,7 +307,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			require.NoError(t, err)
 
 			switch tt.want.statusCode {
-			case http.StatusCreated:
+			case http.StatusCreated, http.StatusConflict:
 				var resp dto.Response
 				err = json.Unmarshal(body, &resp)
 				require.NoError(t, err)

@@ -105,7 +105,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 	shortURL, err := app.storage.CreateShortURL(ctx, url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
+			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
 			return
 		}
 

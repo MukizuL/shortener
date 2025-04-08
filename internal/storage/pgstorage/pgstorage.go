@@ -22,7 +22,7 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchReq
 
 	tx, err := P.conn.Begin(ctx)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+		P.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 	defer tx.Rollback(ctx)
@@ -39,7 +39,7 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchReq
 				}
 			}
 
-			P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(pgErr))
+			P.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
 			return nil, errs.ErrInternalServerError
 		}
 
@@ -58,12 +58,23 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchReq
 func (P *PGStorage) CreateShortURL(ctx context.Context, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
 	_, err := P.conn.Exec(ctx, `INSERT INTO urls (short_url, full_url) VALUES ($1, $2)`, ID, fullURL)
-	if err != nil {
+	if err != nil { // What a horrific abomination
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case pgerrcode.UniqueViolation:
-				return "", errs.ErrDuplicate
+				switch pgErr.ConstraintName {
+				case "urls_full_url_key":
+					err = P.conn.QueryRow(ctx, `SELECT short_url FROM urls WHERE full_url = $1`, fullURL).Scan(&ID)
+					if err != nil {
+						P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+						return "", errs.ErrInternalServerError
+					}
+
+					return "http://localhost:8080/" + ID, errs.ErrDuplicate
+				case "urls_short_url_key":
+					return P.CreateShortURL(ctx, fullURL)
+				}
 			}
 		}
 
