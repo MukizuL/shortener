@@ -58,7 +58,7 @@ func Run() error {
 			return err
 		}
 
-		db, err := pgstorage.New(ctx, params.DSN)
+		db, err := pgstorage.New(ctx, params.DSN, log)
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func Run() error {
 		repository = db
 
 	} else {
-		repository, err = mapstorage.New(ctx, params.Filepath)
+		repository, err = mapstorage.New(ctx, params.Filepath, log)
 		if err != nil {
 			return err
 		}

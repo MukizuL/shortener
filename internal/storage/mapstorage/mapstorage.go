@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/MukizuL/shortener/internal/models"
+	"go.uber.org/zap"
 	"io"
 	"os"
 	"sync"
@@ -18,12 +18,14 @@ type MapStorage struct {
 	storage    map[string]string
 	createdURL map[string]struct{}
 	m          sync.RWMutex
+	logger     *zap.Logger
 }
 
-func New(ctx context.Context, filepath string) (*MapStorage, error) {
+func New(ctx context.Context, filepath string, logger *zap.Logger) (*MapStorage, error) {
 	storage := &MapStorage{
 		storage:    make(map[string]string),
 		createdURL: make(map[string]struct{}),
+		logger:     logger,
 	}
 
 	err := storage.LoadStorage(ctx, filepath)
@@ -92,12 +94,13 @@ func (r *MapStorage) LoadStorage(ctx context.Context, filepath string) error {
 	defer r.m.Unlock()
 
 	file, err := os.Open(filepath)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
 	if err != nil {
-		return fmt.Errorf("open storage file: %w", err)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+
+		r.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
+		return errs.ErrInternalServerError
 	}
 
 	defer file.Close()
@@ -109,7 +112,8 @@ func (r *MapStorage) LoadStorage(ctx context.Context, filepath string) error {
 			return nil
 		}
 
-		return err
+		r.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
+		return errs.ErrInternalServerError
 	}
 
 	for _, entry := range data {
@@ -126,7 +130,8 @@ func (r *MapStorage) OffloadStorage(ctx context.Context, filepath string) error 
 
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		panic("Error opening file" + err.Error())
+		r.logger.Error("mapstorage:OffloadStorage Error opening file", zap.Error(err))
+		return errs.ErrInternalServerError
 	}
 	defer file.Close()
 
@@ -140,7 +145,8 @@ func (r *MapStorage) OffloadStorage(ctx context.Context, filepath string) error 
 
 	err = json.NewEncoder(file).Encode(&data)
 	if err != nil {
-		return err
+		r.logger.Error("mapstorage:OffloadStorage Error encoding data", zap.Error(err))
+		return errs.ErrInternalServerError
 	}
 
 	return nil
