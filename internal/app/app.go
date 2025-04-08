@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/MukizuL/shortener/internal/config"
+	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/storage/mapstorage"
 	"github.com/MukizuL/shortener/internal/storage/pgstorage"
 	"github.com/golang-migrate/migrate/v4"
@@ -20,6 +21,7 @@ import (
 
 type repo interface {
 	CreateShortURL(ctx context.Context, fullURL string) (string, error)
+	BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error)
 	GetLongURL(ctx context.Context, ID string) (string, error)
 	OffloadStorage(ctx context.Context, filepath string) error
 	Ping(ctx context.Context) error

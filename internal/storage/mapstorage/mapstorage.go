@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/MukizuL/shortener/internal/models"
@@ -49,6 +50,30 @@ func (r *MapStorage) CreateShortURL(ctx context.Context, fullURL string) (string
 	r.storage[ID] = fullURL
 
 	return shortURL, nil
+}
+
+func (r *MapStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+
+	result := make([]dto.BatchResponse, 0, len(data))
+
+	for _, v := range data {
+		if _, exist := r.createdURL[v.OriginalURL]; exist {
+			return nil, errs.ErrDuplicate
+		}
+
+		r.createdURL[v.OriginalURL] = struct{}{}
+
+		ID := helpers.RandomString(6)
+		shortURL := "http://localhost:8080/" + ID
+
+		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: shortURL})
+
+		r.storage[ID] = v.OriginalURL
+	}
+
+	return result, nil
 }
 
 func (r *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
