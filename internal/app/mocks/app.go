@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	dto "github.com/MukizuL/shortener/internal/dto"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -38,6 +39,21 @@ func NewMockrepo(ctrl *gomock.Controller) *Mockrepo {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *Mockrepo) EXPECT() *MockrepoMockRecorder {
 	return m.recorder
+}
+
+// BatchCreateShortURL mocks base method.
+func (m *Mockrepo) BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchCreateShortURL", ctx, data)
+	ret0, _ := ret[0].([]dto.BatchResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchCreateShortURL indicates an expected call of BatchCreateShortURL.
+func (mr *MockrepoMockRecorder) BatchCreateShortURL(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateShortURL", reflect.TypeOf((*Mockrepo)(nil).BatchCreateShortURL), ctx, data)
 }
 
 // CreateShortURL mocks base method.
