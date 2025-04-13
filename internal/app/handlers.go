@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
@@ -16,7 +17,7 @@ import (
 )
 
 func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	rawURL, err := io.ReadAll(r.Body)
@@ -36,7 +37,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(ctx, url.String())
+	shortURL, err := app.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -57,7 +58,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	ID := chi.URLParam(r, "id")
@@ -81,7 +82,7 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	var req dto.Request
@@ -102,7 +103,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(ctx, url.String())
+	shortURL, err := app.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
@@ -119,7 +120,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 }
 
 func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	var req []dto.BatchRequest
@@ -142,7 +143,7 @@ func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	response, err := app.storage.BatchCreateShortURL(ctx, req)
+	response, err := app.storage.BatchCreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
@@ -157,7 +158,7 @@ func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.R
 }
 
 func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
 	err := app.storage.Ping(ctx)

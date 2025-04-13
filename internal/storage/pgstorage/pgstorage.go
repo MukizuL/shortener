@@ -17,7 +17,7 @@ type PGStorage struct {
 	logger *zap.Logger
 }
 
-func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (P *PGStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	result := make([]dto.BatchResponse, 0, len(data))
 
 	tx, err := P.conn.Begin(ctx)
@@ -43,7 +43,7 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchReq
 			return nil, errs.ErrInternalServerError
 		}
 
-		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: "http://localhost:8080/" + ID})
+		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: urlBase + ID})
 	}
 
 	err = tx.Commit(ctx)
@@ -55,41 +55,33 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchReq
 	return result, nil
 }
 
-func (P *PGStorage) CreateShortURL(ctx context.Context, fullURL string) (string, error) {
+func (P *PGStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
-	_, err := P.conn.Exec(ctx, `INSERT INTO urls (short_url, full_url) VALUES ($1, $2)`, ID, fullURL)
-	if err != nil { // What a horrific abomination
+	err := P.conn.QueryRow(ctx, `INSERT INTO urls (short_url, full_url)
+										VALUES ($1, $2)
+										ON CONFLICT(full_url)
+										DO UPDATE SET full_url = EXCLUDED.full_url
+										RETURNING short_url`, ID, fullURL).Scan(&ID)
+	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			switch pgErr.Code {
-			case pgerrcode.UniqueViolation:
-				switch pgErr.ConstraintName {
-				case "urls_full_url_key":
-					err = P.conn.QueryRow(ctx, `SELECT short_url FROM urls WHERE full_url = $1`, fullURL).Scan(&ID)
-					if err != nil {
-						P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
-						return "", errs.ErrInternalServerError
-					}
-
-					return "http://localhost:8080/" + ID, errs.ErrDuplicate
-				case "urls_short_url_key":
-					return P.CreateShortURL(ctx, fullURL)
-				}
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return P.CreateShortURL(ctx, urlBase, fullURL)
 			}
 		}
 
-		P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+		P.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 
-	return "http://localhost:8080/" + ID, nil
+	return urlBase + ID, nil
 }
 
 func (P *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	var result string
 	err := P.conn.QueryRow(ctx, `SELECT full_url FROM urls WHERE short_url = $1`, ID).Scan(&result)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+		P.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 

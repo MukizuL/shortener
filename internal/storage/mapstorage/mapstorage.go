@@ -36,16 +36,16 @@ func New(ctx context.Context, filepath string, logger *zap.Logger) (*MapStorage,
 	return storage, nil
 }
 
-func (r *MapStorage) CreateShortURL(ctx context.Context, fullURL string) (string, error) {
+func (r *MapStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
 	if v, exist := r.createdURL[fullURL]; exist {
-		return "http://localhost:8080/" + v, errs.ErrDuplicate
+		return urlBase + v, errs.ErrDuplicate
 	}
 
 	ID := helpers.RandomString(6)
-	shortURL := "http://localhost:8080/" + ID
+	shortURL := urlBase + ID
 
 	r.createdURL[fullURL] = ID
 
@@ -54,7 +54,7 @@ func (r *MapStorage) CreateShortURL(ctx context.Context, fullURL string) (string
 	return shortURL, nil
 }
 
-func (r *MapStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (r *MapStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -66,7 +66,7 @@ func (r *MapStorage) BatchCreateShortURL(ctx context.Context, data []dto.BatchRe
 		}
 
 		ID := helpers.RandomString(6)
-		shortURL := "http://localhost:8080/" + ID
+		shortURL := urlBase + ID
 
 		r.createdURL[v.OriginalURL] = ID
 

@@ -20,8 +20,8 @@ import (
 //go:generate mockgen -source=app.go -destination=mocks/app.go -package=mocksapp
 
 type repo interface {
-	CreateShortURL(ctx context.Context, fullURL string) (string, error)
-	BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error)
+	CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error)
+	BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error)
 	GetLongURL(ctx context.Context, ID string) (string, error)
 	OffloadStorage(ctx context.Context, filepath string) error
 	Ping(ctx context.Context) error

@@ -42,33 +42,33 @@ func (m *Mockrepo) EXPECT() *MockrepoMockRecorder {
 }
 
 // BatchCreateShortURL mocks base method.
-func (m *Mockrepo) BatchCreateShortURL(ctx context.Context, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (m *Mockrepo) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchCreateShortURL", ctx, data)
+	ret := m.ctrl.Call(m, "BatchCreateShortURL", ctx, urlBase, data)
 	ret0, _ := ret[0].([]dto.BatchResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchCreateShortURL indicates an expected call of BatchCreateShortURL.
-func (mr *MockrepoMockRecorder) BatchCreateShortURL(ctx, data any) *gomock.Call {
+func (mr *MockrepoMockRecorder) BatchCreateShortURL(ctx, urlBase, data any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateShortURL", reflect.TypeOf((*Mockrepo)(nil).BatchCreateShortURL), ctx, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateShortURL", reflect.TypeOf((*Mockrepo)(nil).BatchCreateShortURL), ctx, urlBase, data)
 }
 
 // CreateShortURL mocks base method.
-func (m *Mockrepo) CreateShortURL(ctx context.Context, fullURL string) (string, error) {
+func (m *Mockrepo) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateShortURL", ctx, fullURL)
+	ret := m.ctrl.Call(m, "CreateShortURL", ctx, urlBase, fullURL)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateShortURL indicates an expected call of CreateShortURL.
-func (mr *MockrepoMockRecorder) CreateShortURL(ctx, fullURL any) *gomock.Call {
+func (mr *MockrepoMockRecorder) CreateShortURL(ctx, urlBase, fullURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShortURL", reflect.TypeOf((*Mockrepo)(nil).CreateShortURL), ctx, fullURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShortURL", reflect.TypeOf((*Mockrepo)(nil).CreateShortURL), ctx, urlBase, fullURL)
 }
 
 // GetLongURL mocks base method.
