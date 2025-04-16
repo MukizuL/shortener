@@ -60,7 +60,7 @@ func (P *PGStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string)
 	err := P.conn.QueryRow(ctx, `INSERT INTO urls (short_url, full_url)
 										VALUES ($1, $2)
 										ON CONFLICT(full_url)
-										DO UPDATE SET full_url = EXCLUDED.full_url
+										DO UPDATE SET full_url = urls.full_url
 										RETURNING short_url`, ID, fullURL).Scan(&ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
