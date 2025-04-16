@@ -36,7 +36,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
 			},
 			want: want{
@@ -50,7 +50,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("", errs.ErrDuplicate)
 			},
 			want: want{
@@ -88,6 +88,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			}
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			r.Host = "localhost:8080"
 			w := httptest.NewRecorder()
 			app.CreateShortURL(w, r)
 
@@ -123,7 +124,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			query: "qxDvSD",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					GetLongURL("qxDvSD").
+					GetLongURL(gomock.Any(), "qxDvSD").
 					Return("https://www.youtube.com", nil)
 			},
 			want: want{
@@ -136,7 +137,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			query: "qxDvSg",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					GetLongURL("qxDvSg").
+					GetLongURL(gomock.Any(), "qxDvSg").
 					Return("", errs.ErrNotFound)
 			},
 			want: want{
@@ -212,7 +213,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
+					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
 			},
 			want: want{
@@ -226,13 +227,13 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			body: "https://www.youtube.com",
 			mockSetup: func(m *mocksapp.Mockrepo) {
 				m.EXPECT().
-					CreateShortURL("https://www.youtube.com").
-					Return("", errs.ErrDuplicate)
+					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
+					Return("http://localhost:8080/qxDvSD", errs.ErrDuplicate)
 			},
 			want: want{
 				contentType: "application/json",
 				statusCode:  409,
-				response:    dto.ErrorResponse{Err: "Conflict"},
+				response:    dto.Response{Result: "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
@@ -292,6 +293,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
 			r.Header.Set("Content-Type", "application/json")
+			r.Host = "localhost:8080"
 
 			w := httptest.NewRecorder()
 			app.CreateShortURLJSON(w, r)
@@ -307,7 +309,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			require.NoError(t, err)
 
 			switch tt.want.statusCode {
-			case http.StatusCreated:
+			case http.StatusCreated, http.StatusConflict:
 				var resp dto.Response
 				err = json.Unmarshal(body, &resp)
 				require.NoError(t, err)

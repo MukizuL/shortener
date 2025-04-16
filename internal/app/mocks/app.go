@@ -10,8 +10,10 @@
 package mocksapp
 
 import (
+	context "context"
 	reflect "reflect"
 
+	dto "github.com/MukizuL/shortener/internal/dto"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -39,46 +41,75 @@ func (m *Mockrepo) EXPECT() *MockrepoMockRecorder {
 	return m.recorder
 }
 
-// CreateShortURL mocks base method.
-func (m *Mockrepo) CreateShortURL(fullURL string) (string, error) {
+// BatchCreateShortURL mocks base method.
+func (m *Mockrepo) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateShortURL", fullURL)
+	ret := m.ctrl.Call(m, "BatchCreateShortURL", ctx, urlBase, data)
+	ret0, _ := ret[0].([]dto.BatchResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchCreateShortURL indicates an expected call of BatchCreateShortURL.
+func (mr *MockrepoMockRecorder) BatchCreateShortURL(ctx, urlBase, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchCreateShortURL", reflect.TypeOf((*Mockrepo)(nil).BatchCreateShortURL), ctx, urlBase, data)
+}
+
+// CreateShortURL mocks base method.
+func (m *Mockrepo) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateShortURL", ctx, urlBase, fullURL)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateShortURL indicates an expected call of CreateShortURL.
-func (mr *MockrepoMockRecorder) CreateShortURL(fullURL any) *gomock.Call {
+func (mr *MockrepoMockRecorder) CreateShortURL(ctx, urlBase, fullURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShortURL", reflect.TypeOf((*Mockrepo)(nil).CreateShortURL), fullURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShortURL", reflect.TypeOf((*Mockrepo)(nil).CreateShortURL), ctx, urlBase, fullURL)
 }
 
 // GetLongURL mocks base method.
-func (m *Mockrepo) GetLongURL(ID string) (string, error) {
+func (m *Mockrepo) GetLongURL(ctx context.Context, ID string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLongURL", ID)
+	ret := m.ctrl.Call(m, "GetLongURL", ctx, ID)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLongURL indicates an expected call of GetLongURL.
-func (mr *MockrepoMockRecorder) GetLongURL(ID any) *gomock.Call {
+func (mr *MockrepoMockRecorder) GetLongURL(ctx, ID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLongURL", reflect.TypeOf((*Mockrepo)(nil).GetLongURL), ID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLongURL", reflect.TypeOf((*Mockrepo)(nil).GetLongURL), ctx, ID)
 }
 
 // OffloadStorage mocks base method.
-func (m *Mockrepo) OffloadStorage(filepath string) error {
+func (m *Mockrepo) OffloadStorage(ctx context.Context, filepath string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OffloadStorage", filepath)
+	ret := m.ctrl.Call(m, "OffloadStorage", ctx, filepath)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // OffloadStorage indicates an expected call of OffloadStorage.
-func (mr *MockrepoMockRecorder) OffloadStorage(filepath any) *gomock.Call {
+func (mr *MockrepoMockRecorder) OffloadStorage(ctx, filepath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OffloadStorage", reflect.TypeOf((*Mockrepo)(nil).OffloadStorage), filepath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OffloadStorage", reflect.TypeOf((*Mockrepo)(nil).OffloadStorage), ctx, filepath)
+}
+
+// Ping mocks base method.
+func (m *Mockrepo) Ping(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ping", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ping indicates an expected call of Ping.
+func (mr *MockrepoMockRecorder) Ping(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*Mockrepo)(nil).Ping), ctx)
 }

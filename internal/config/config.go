@@ -17,6 +17,7 @@ type Params struct {
 	Addr     string `env:"SERVER_ADDRESS"`
 	Base     string `env:"BASE_URL"`
 	Filepath string `env:"FILE_STORAGE_PATH"`
+	DSN      string `env:"DATABASE_DSN"`
 }
 
 // GetParams fetches parameters, firstly from env variables, secondly from flags
@@ -40,6 +41,10 @@ func GetParams() *Params {
 
 	if result.Filepath == "" {
 		flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
+	}
+
+	if result.DSN == "" {
+		flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
 	}
 
 	flag.Parse()
