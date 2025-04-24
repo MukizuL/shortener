@@ -1,17 +1,17 @@
 package controller
 
 import (
-	"github.com/MukizuL/shortener/internal/app"
+	"github.com/MukizuL/shortener/internal/storage"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Controller struct {
-	storage app.Repo
+	storage storage.Repo
 	logger  *zap.Logger
 }
 
-func newController(storage app.Repo, logger *zap.Logger) *Controller {
+func newController(storage storage.Repo, logger *zap.Logger) *Controller {
 	return &Controller{
 		storage: storage,
 		logger:  logger,

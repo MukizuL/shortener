@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	mocksapp "github.com/MukizuL/shortener/internal/app/mocks"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
+	mocksapp "github.com/MukizuL/shortener/internal/storage/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,13 +28,13 @@ func TestApplication_CreateShortURL(t *testing.T) {
 	tests := []struct {
 		name      string
 		body      string
-		mockSetup func(m *mocksapp.Mockrepo)
+		mockSetup func(m *mocksapp.MockRepo)
 		want      want
 	}{
 		{
 			name: "Correct working",
 			body: "https://www.youtube.com",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
@@ -48,7 +48,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		{
 			name: "Duplicate URL",
 			body: "https://www.youtube.com",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("", errs.ErrDuplicate)
@@ -62,7 +62,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 		{
 			name: "Incorrect URL #1",
 			body: "https://",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 
 			},
 			want: want{
@@ -78,7 +78,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRepo := mocksapp.NewMockrepo(ctrl)
+			mockRepo := mocksapp.NewMockRepo(ctrl)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockRepo)
 			}
@@ -116,13 +116,13 @@ func TestApplication_GetFullURL(t *testing.T) {
 	tests := []struct {
 		name      string
 		query     string
-		mockSetup func(m *mocksapp.Mockrepo)
+		mockSetup func(m *mocksapp.MockRepo)
 		want      want
 	}{
 		{
 			name:  "Correct URL",
 			query: "qxDvSD",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					GetLongURL(gomock.Any(), "qxDvSD").
 					Return("https://www.youtube.com", nil)
@@ -135,7 +135,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 		{
 			name:  "Not present URL",
 			query: "qxDvSg",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					GetLongURL(gomock.Any(), "qxDvSg").
 					Return("", errs.ErrNotFound)
@@ -148,7 +148,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 		{
 			name:  "Empty URL",
 			query: "",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 
 			},
 			want: want{
@@ -163,7 +163,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRepo := mocksapp.NewMockrepo(ctrl)
+			mockRepo := mocksapp.NewMockRepo(ctrl)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockRepo)
 			}
@@ -205,13 +205,13 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 	tests := []struct {
 		name      string
 		body      string
-		mockSetup func(m *mocksapp.Mockrepo)
+		mockSetup func(m *mocksapp.MockRepo)
 		want      want
 	}{
 		{
 			name: "Correct working",
 			body: "https://www.youtube.com",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
@@ -225,7 +225,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 		{
 			name: "Duplicate URL",
 			body: "https://www.youtube.com",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", errs.ErrDuplicate)
@@ -239,7 +239,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 		{
 			name: "Incorrect URL #1",
 			body: "https://",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 
 			},
 			want: want{
@@ -251,7 +251,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 		{
 			name: "Incorrect URL #2",
 			body: "www.something.ru",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 
 			},
 			want: want{
@@ -263,7 +263,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 		{
 			name: "Empty URL",
 			body: "",
-			mockSetup: func(m *mocksapp.Mockrepo) {
+			mockSetup: func(m *mocksapp.MockRepo) {
 
 			},
 			want: want{
@@ -279,7 +279,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRepo := mocksapp.NewMockrepo(ctrl)
+			mockRepo := mocksapp.NewMockRepo(ctrl)
 			if tt.mockSetup != nil {
 				tt.mockSetup(mockRepo)
 			}

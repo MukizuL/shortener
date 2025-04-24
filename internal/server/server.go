@@ -3,10 +3,12 @@ package server
 import (
 	"context"
 	"errors"
-	"github.com/MukizuL/shortener/internal/app"
 	"github.com/MukizuL/shortener/internal/config"
+	"github.com/MukizuL/shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net"
@@ -15,7 +17,7 @@ import (
 	"time"
 )
 
-func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.Logger, storage app.Repo) *http.Server {
+func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.Logger, storage storage.Repo) *http.Server {
 	srv := &http.Server{
 		Addr:    cfg.Addr,
 		Handler: r,
