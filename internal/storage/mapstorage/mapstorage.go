@@ -11,30 +11,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"os"
-	"sync"
 )
-
-type MapStorage struct {
-	storage    map[string]string
-	createdURL map[string]string
-	m          sync.RWMutex
-	logger     *zap.Logger
-}
-
-func New(ctx context.Context, filepath string, logger *zap.Logger) (*MapStorage, error) {
-	storage := &MapStorage{
-		storage:    make(map[string]string),
-		createdURL: make(map[string]string),
-		logger:     logger,
-	}
-
-	err := storage.LoadStorage(ctx, filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	return storage, nil
-}
 
 func (r *MapStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
 	r.m.Lock()
@@ -89,7 +66,7 @@ func (r *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) 
 	}
 }
 
-func (r *MapStorage) LoadStorage(ctx context.Context, filepath string) error {
+func (r *MapStorage) LoadStorage(filepath string) error {
 	r.m.Lock()
 	defer r.m.Unlock()
 

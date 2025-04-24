@@ -1,4 +1,4 @@
-package app
+package controller
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -37,7 +37,7 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -53,11 +53,11 @@ func (app *Application) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(shortURL))
 	if err != nil {
-		app.logger.Error("Error in handler CreateShortURL", zap.Error(err))
+		c.logger.Error("Error in handler CreateShortURL", zap.Error(err))
 	}
 }
 
-func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -67,7 +67,7 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullURL, err := app.storage.GetLongURL(ctx, ID)
+	fullURL, err := c.storage.GetLongURL(ctx, ID)
 	if err != nil {
 		if errors.Is(err, errs.ErrNotFound) {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -81,7 +81,7 @@ func (app *Application) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
 
-func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -103,7 +103,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	shortURL, err := app.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
@@ -119,7 +119,7 @@ func (app *Application) CreateShortURLJSON(w http.ResponseWriter, r *http.Reques
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
 
-func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -143,7 +143,7 @@ func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.R
 		}
 	}
 
-	response, err := app.storage.BatchCreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), req)
+	response, err := c.storage.BatchCreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
@@ -157,13 +157,13 @@ func (app *Application) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.R
 	helpers.WriteJSON(w, http.StatusCreated, response)
 }
 
-func (app *Application) Ping(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	err := app.storage.Ping(ctx)
+	err := c.storage.Ping(ctx)
 	if err != nil {
-		app.logger.Error("Error in Ping handler", zap.Error(err))
+		c.logger.Error("Error in Ping handler", zap.Error(err))
 		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
 		return
 	}

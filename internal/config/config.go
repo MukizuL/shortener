@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/caarlos0/env/v11"
+	"go.uber.org/fx"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,16 +14,16 @@ import (
 
 var ErrMalformedFlags = errors.New("error parsing flags")
 
-type Params struct {
+type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`
 	Base     string `env:"BASE_URL"`
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
 }
 
-// GetParams fetches parameters, firstly from env variables, secondly from flags
-func GetParams() *Params {
-	result := &Params{}
+// NewConfig fetches parameters, firstly from env variables, secondly from flags
+func NewConfig() *Config {
+	result := &Config{}
 
 	err := env.Parse(result)
 	if err != nil {
@@ -58,7 +59,7 @@ func GetParams() *Params {
 	return result
 }
 
-func checkParams(data *Params) error {
+func checkParams(data *Config) error {
 	if data.Addr != "" {
 		addr := strings.Split(data.Addr, ":")
 		if len(addr) != 2 {
@@ -87,4 +88,8 @@ func checkParams(data *Params) error {
 	}
 
 	return nil
+}
+
+func Provide() fx.Option {
+	return fx.Provide(NewConfig)
 }
