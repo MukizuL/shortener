@@ -1,4 +1,4 @@
-package app
+package controller
 
 import (
 	"bytes"
@@ -83,7 +83,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 				tt.mockSetup(mockRepo)
 			}
 
-			app := &Application{
+			app := &Controller{
 				storage: mockRepo,
 			}
 
@@ -168,7 +168,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 				tt.mockSetup(mockRepo)
 			}
 
-			app := &Application{
+			app := &Controller{
 				storage: mockRepo,
 			}
 
@@ -284,7 +284,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 				tt.mockSetup(mockRepo)
 			}
 
-			app := &Application{
+			app := &Controller{
 				storage: mockRepo,
 			}
 

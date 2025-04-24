@@ -1,25 +1,30 @@
 package pgstorage
 
-import "go.uber.org/fx"
+import (
+	"context"
+	"github.com/MukizuL/shortener/internal/app"
+	"github.com/MukizuL/shortener/internal/config"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
+)
 
-type PostgresService struct {
-	cfg PostgresConfig
+type PGStorage struct {
+	conn   *pgxpool.Pool
+	logger *zap.Logger
 }
 
-type PostgresServiceIn struct {
-	fx.In
-
-	Cfg PostgresConfig
-}
-
-func NewPostgresService(in PostgresServiceIn) *PostgresService {
-	return &PostgresService{
-		cfg: in.Cfg,
+func newPGStorage(cfg *config.Config, logger *zap.Logger) app.Repo {
+	dbpool, err := pgxpool.New(context.TODO(), cfg.DSN)
+	if err != nil {
+		panic(err)
+	}
+	return &PGStorage{
+		conn:   dbpool,
+		logger: logger,
 	}
 }
 
-func ProvidePostgres() fx.Option {
-	return fx.Provide(
-		NewPostgresService,
-	)
+func Provide() fx.Option {
+	return fx.Provide(newPGStorage)
 }

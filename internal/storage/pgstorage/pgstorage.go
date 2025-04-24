@@ -8,14 +8,8 @@ import (
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
-
-type PGStorage struct {
-	conn   *pgxpool.Pool
-	logger *zap.Logger
-}
 
 func (P *PGStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	result := make([]dto.BatchResponse, 0, len(data))
@@ -102,12 +96,4 @@ func (P *PGStorage) Ping(ctx context.Context) error {
 
 func (P *PGStorage) Close() {
 	P.conn.Close()
-}
-
-func New(ctx context.Context, dsn string, logger *zap.Logger) (*PGStorage, error) {
-	dbpool, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		return nil, err
-	}
-	return &PGStorage{conn: dbpool, logger: logger}, nil
 }
