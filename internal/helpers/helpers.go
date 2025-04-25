@@ -24,3 +24,17 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
+
+func WriteCookie(w http.ResponseWriter, token string) {
+	tokenCookie := &http.Cookie{
+		Name:     "Access-token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   876000,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteDefaultMode,
+	}
+
+	http.SetCookie(w, tokenCookie)
+}

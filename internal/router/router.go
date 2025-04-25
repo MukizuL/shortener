@@ -17,6 +17,7 @@ func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Contr
 	r.Get(cfg.Base+"/{id}", c.GetFullURL)
 	r.Get(cfg.Base+"/ping", c.Ping)
 
+	r.Get(cfg.Base+"/api/user/urls", c.GetURLs)
 	r.Post(cfg.Base+"/api/shorten", c.CreateShortURLJSON)
 	r.Post(cfg.Base+"/api/shorten/batch", c.BatchCreateShortURLJSON)
 	return r

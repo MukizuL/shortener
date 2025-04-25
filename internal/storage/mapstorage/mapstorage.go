@@ -13,7 +13,7 @@ import (
 	"os"
 )
 
-func (r *MapStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
+func (r *MapStorage) CreateShortURL(ctx context.Context, userId, urlBase, fullURL string) (string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -28,10 +28,12 @@ func (r *MapStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string
 
 	r.storage[ID] = fullURL
 
+	r.userLink[userId] = append(r.userLink[userId], ID)
+
 	return shortURL, nil
 }
 
-func (r *MapStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (r *MapStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -50,6 +52,8 @@ func (r *MapStorage) BatchCreateShortURL(ctx context.Context, urlBase string, da
 		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: shortURL})
 
 		r.storage[ID] = v.OriginalURL
+
+		r.userLink[userId] = append(r.userLink[userId], ID)
 	}
 
 	return result, nil
@@ -64,6 +68,30 @@ func (r *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) 
 	} else {
 		return val, nil
 	}
+}
+
+func (r *MapStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
+	r.m.RLock()
+	defer r.m.RUnlock()
+
+	var result []dto.URLPair
+
+	data, ok := r.userLink[userID]
+	if !ok {
+		return nil, errs.ErrNotFound
+	}
+
+	for _, v := range data {
+		fullURL := r.storage[v]
+		pair := dto.URLPair{
+			ShortURL:    v,
+			OriginalURL: fullURL,
+		}
+
+		result = append(result, pair)
+	}
+
+	return result, nil
 }
 
 func (r *MapStorage) LoadStorage(filepath string) error {

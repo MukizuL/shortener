@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
@@ -19,6 +20,7 @@ type Config struct {
 	Base     string `env:"BASE_URL"`
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
+	Key      string `env:"PRIVATE_KEY"`
 }
 
 // NewConfig fetches parameters, firstly from env variables, secondly from flags
@@ -31,7 +33,7 @@ func NewConfig() *Config {
 	}
 
 	if result.Addr == "" {
-		flag.StringVar(&result.Addr, "a", "localhost:8080", "Sets server address.")
+		flag.StringVar(&result.Addr, "a", "0.0.0.0:8080", "Sets server address.")
 	}
 
 	if result.Base == "" {
@@ -59,9 +61,9 @@ func NewConfig() *Config {
 	return result
 }
 
-func checkParams(data *Config) error {
-	if data.Addr != "" {
-		addr := strings.Split(data.Addr, ":")
+func checkParams(cfg *Config) error {
+	if cfg.Addr != "" {
+		addr := strings.Split(cfg.Addr, ":")
 		if len(addr) != 2 {
 			return ErrMalformedFlags
 		}
@@ -72,19 +74,23 @@ func checkParams(data *Config) error {
 		}
 	}
 
-	if data.Base != "" {
-		if string(data.Base[0]) == "/" || string(data.Base[len(data.Base)-1]) == "/" {
+	if cfg.Base != "" {
+		if string(cfg.Base[0]) == "/" || string(cfg.Base[len(cfg.Base)-1]) == "/" {
 			return ErrMalformedFlags
 		}
 	}
 
-	if !filepath.IsAbs(data.Filepath) {
-		temp, err := filepath.Abs(data.Filepath)
+	if !filepath.IsAbs(cfg.Filepath) {
+		temp, err := filepath.Abs(cfg.Filepath)
 		if err != nil {
 			return ErrMalformedFlags
 		}
 
-		data.Filepath = temp
+		cfg.Filepath = temp
+	}
+
+	if cfg.Key == "" {
+		return fmt.Errorf("missing private key in PRIVATE_KEY env")
 	}
 
 	return nil

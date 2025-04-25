@@ -37,7 +37,28 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	cookie, err := r.Cookie("Access-token")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	var token, userID string
+	if errors.Is(err, http.ErrNoCookie) {
+		token, userID, err = c.jwtService.CreateToken()
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -47,6 +68,8 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+
+	helpers.WriteCookie(w, token)
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -81,6 +104,48 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
 
+func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	cookie, err := r.Cookie("Access-token")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	_, userID, err := c.jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		c.logger.Error("GetURLs Failed to validate token", zap.Error(err))
+
+		if errors.Is(err, errs.ErrNotAuthorized) {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	data, err := c.storage.GetUserURLs(ctx, userID)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			http.Error(w, http.StatusText(http.StatusNoContent), http.StatusNoContent)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusOK, data)
+}
+
 func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -103,7 +168,28 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	cookie, err := r.Cookie("Access-token")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	var token, userID string
+	if errors.Is(err, http.ErrNoCookie) {
+		token, userID, err = c.jwtService.CreateToken()
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
@@ -115,6 +201,8 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	}
 
 	out := &dto.Response{Result: shortURL}
+
+	helpers.WriteCookie(w, token)
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
@@ -143,7 +231,28 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	response, err := c.storage.BatchCreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), req)
+	cookie, err := r.Cookie("Access-token")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	var token, userID string
+	if errors.Is(err, http.ErrNoCookie) {
+		token, userID, err = c.jwtService.CreateToken()
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	response, err := c.storage.BatchCreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
@@ -153,6 +262,8 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
 		return
 	}
+
+	helpers.WriteCookie(w, token)
 
 	helpers.WriteJSON(w, http.StatusCreated, response)
 }

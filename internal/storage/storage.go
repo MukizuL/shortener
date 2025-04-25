@@ -12,9 +12,10 @@ import (
 //go:generate mockgen -source=storage.go -destination=mocks/storage.go -package=mockstorage
 
 type Repo interface {
-	CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error)
-	BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error)
+	CreateShortURL(ctx context.Context, userId, urlBase, fullURL string) (string, error)
+	BatchCreateShortURL(ctx context.Context, userId, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error)
 	GetLongURL(ctx context.Context, ID string) (string, error)
+	GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error)
 	OffloadStorage(ctx context.Context, filepath string) error
 	Ping(ctx context.Context) error
 }
