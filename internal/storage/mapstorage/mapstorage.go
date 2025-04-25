@@ -13,7 +13,7 @@ import (
 	"os"
 )
 
-func (r *MapStorage) CreateShortURL(ctx context.Context, userId, urlBase, fullURL string) (string, error) {
+func (r *MapStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -28,12 +28,12 @@ func (r *MapStorage) CreateShortURL(ctx context.Context, userId, urlBase, fullUR
 
 	r.storage[ID] = fullURL
 
-	r.userLink[userId] = append(r.userLink[userId], ID)
+	r.userLink[userID] = append(r.userLink[userID], ID)
 
 	return shortURL, nil
 }
 
-func (r *MapStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (r *MapStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	r.m.Lock()
 	defer r.m.Unlock()
 
@@ -53,7 +53,7 @@ func (r *MapStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase st
 
 		r.storage[ID] = v.OriginalURL
 
-		r.userLink[userId] = append(r.userLink[userId], ID)
+		r.userLink[userID] = append(r.userLink[userID], ID)
 	}
 
 	return result, nil

@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	result := make([]dto.BatchResponse, 0, len(data))
 
 	tx, err := P.conn.Begin(ctx)
@@ -23,7 +23,7 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase str
 
 	for _, v := range data {
 		ID := helpers.RandomString(6)
-		_, err = tx.Exec(ctx, `INSERT INTO urls (user_id, short_url, full_url) VALUES ($1, $2, $3)`, userId, ID, v.OriginalURL)
+		_, err = tx.Exec(ctx, `INSERT INTO urls (user_id, short_url, full_url) VALUES ($1, $2, $3)`, userID, ID, v.OriginalURL)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -49,18 +49,18 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userId, urlBase str
 	return result, nil
 }
 
-func (P *PGStorage) CreateShortURL(ctx context.Context, userId, urlBase, fullURL string) (string, error) {
+func (P *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
 	err := P.conn.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
 										VALUES ($1, $2, $3)
 										ON CONFLICT(full_url)
 										DO UPDATE SET full_url = urls.full_url
-										RETURNING short_url`, userId, ID, fullURL).Scan(&ID)
+										RETURNING short_url`, userID, ID, fullURL).Scan(&ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return P.CreateShortURL(ctx, userId, urlBase, fullURL)
+				return P.CreateShortURL(ctx, userID, urlBase, fullURL)
 			}
 		}
 

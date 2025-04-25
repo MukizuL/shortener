@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
@@ -89,9 +88,9 @@ func checkParams(cfg *Config) error {
 		cfg.Filepath = temp
 	}
 
-	if cfg.Key == "" {
-		return fmt.Errorf("missing private key in PRIVATE_KEY env")
-	}
+	//if cfg.Key == "" {
+	//	return fmt.Errorf("missing private key in PRIVATE_KEY env")
+	//}
 
 	return nil
 }
