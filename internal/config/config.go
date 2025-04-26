@@ -81,7 +81,7 @@ func checkParams(cfg *Config) error {
 			return ErrMalformedBase
 		}
 
-		cfg.Base = parsedURL.RequestURI()
+		cfg.Base = strings.TrimSuffix(parsedURL.RequestURI(), "/")
 	}
 
 	if !filepath.IsAbs(cfg.Filepath) {
