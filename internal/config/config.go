@@ -6,13 +6,15 @@ import (
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
-	"os"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 var ErrMalformedFlags = errors.New("error parsing flags")
+var ErrMalformedAddr = errors.New("address of wrong format")
+var ErrMalformedBase = errors.New("base should be an url")
 
 type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`
@@ -36,7 +38,7 @@ func NewConfig() *Config {
 	}
 
 	if result.Base == "" {
-		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: string1/string2")
+		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/*")
 	}
 
 	absPath, _ := filepath.Abs("./storage.json")
@@ -54,7 +56,7 @@ func NewConfig() *Config {
 	err = checkParams(result)
 	if err != nil {
 		flag.Usage()
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	return result
@@ -64,19 +66,22 @@ func checkParams(cfg *Config) error {
 	if cfg.Addr != "" {
 		addr := strings.Split(cfg.Addr, ":")
 		if len(addr) != 2 {
-			return ErrMalformedFlags
+			return ErrMalformedAddr
 		}
 
 		_, err := strconv.Atoi(addr[1])
 		if err != nil {
-			return ErrMalformedFlags
+			return ErrMalformedAddr
 		}
 	}
 
 	if cfg.Base != "" {
-		if string(cfg.Base[0]) == "/" || string(cfg.Base[len(cfg.Base)-1]) == "/" {
-			return ErrMalformedFlags
+		parsedURL, err := url.Parse(cfg.Base)
+		if err != nil {
+			return ErrMalformedBase
 		}
+
+		cfg.Base = parsedURL.RequestURI()
 	}
 
 	if !filepath.IsAbs(cfg.Filepath) {
