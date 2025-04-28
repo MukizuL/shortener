@@ -28,6 +28,10 @@ func (s *MapStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullUR
 
 	s.storage[ID] = fullURL
 
+	if _, ok := s.userLink[userID]; !ok {
+		s.userLink[userID] = make(map[string]struct{})
+	}
+
 	s.userLink[userID][ID] = struct{}{}
 
 	return shortURL, nil
@@ -52,6 +56,10 @@ func (s *MapStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase st
 		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: shortURL})
 
 		s.storage[ID] = v.OriginalURL
+
+		if _, ok := s.userLink[userID]; !ok {
+			s.userLink[userID] = make(map[string]struct{})
+		}
 
 		s.userLink[userID][ID] = struct{}{}
 	}
