@@ -18,8 +18,10 @@ func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Contr
 	r.Get(cfg.Base+"/ping", c.Ping)
 
 	r.Get(cfg.Base+"/api/user/urls", c.GetURLs)
+	r.Delete(cfg.Base+"/api/user/urls", c.DeleteURLs)
 	r.Post(cfg.Base+"/api/shorten", c.CreateShortURLJSON)
 	r.Post(cfg.Base+"/api/shorten/batch", c.BatchCreateShortURLJSON)
+
 	return r
 }
 

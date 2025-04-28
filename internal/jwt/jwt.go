@@ -17,6 +17,7 @@ type JWTServiceInterface interface {
 	CreateToken() (string, string, error)
 	RefreshToken(userID string) (string, error)
 }
+
 type JWTService struct {
 	key []byte
 }

@@ -146,6 +146,56 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, http.StatusOK, data)
 }
 
+func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	cookie, err := r.Cookie("Access-token")
+	if err != nil && !errors.Is(err, http.ErrNoCookie) {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	_, userID, err := c.jwtService.ValidateToken(cookie.Value)
+	if err != nil {
+		c.logger.Error("GetURLs Failed to validate token", zap.Error(err))
+
+		if errors.Is(err, errs.ErrNotAuthorized) {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	var urls []string
+
+	err = json.NewDecoder(r.Body).Decode(&urls)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	err = c.storage.DeleteURLs(ctx, userID, urls)
+	if err != nil {
+		if errors.Is(err, errs.ErrUserMismatch) {
+			helpers.WriteJSON(w, http.StatusUnauthorized, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnauthorized)})
+			return
+		}
+
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusAccepted, http.StatusText(http.StatusAccepted))
+}
+
 func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()

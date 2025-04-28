@@ -11,12 +11,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
 	result := make([]dto.BatchResponse, 0, len(data))
 
-	tx, err := P.conn.Begin(ctx)
+	tx, err := s.conn.Begin(ctx)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
+		s.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 	defer tx.Rollback(ctx)
@@ -33,7 +33,7 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 				}
 			}
 
-			P.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
+			s.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
 			return nil, errs.ErrInternalServerError
 		}
 
@@ -42,16 +42,16 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+		s.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 
 	return result, nil
 }
 
-func (P *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
+func (s *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
-	err := P.conn.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
+	err := s.conn.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
 										VALUES ($1, $2, $3)
 										ON CONFLICT(full_url)
 										DO UPDATE SET full_url = urls.full_url
@@ -60,22 +60,22 @@ func (P *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return P.CreateShortURL(ctx, userID, urlBase, fullURL)
+				return s.CreateShortURL(ctx, userID, urlBase, fullURL)
 			}
 		}
 
-		P.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
+		s.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 
 	return urlBase + ID, nil
 }
 
-func (P *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
+func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	var result string
-	err := P.conn.QueryRow(ctx, `SELECT full_url FROM urls WHERE short_url = $1`, ID).Scan(&result)
+	err := s.conn.QueryRow(ctx, `SELECT full_url FROM urls WHERE short_url = $1`, ID).Scan(&result)
 	if err != nil {
-		P.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
+		s.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 
@@ -86,11 +86,11 @@ func (P *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	return result, nil
 }
 
-func (P *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
+func (s *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
 	var result []dto.URLPair
-	rows, err := P.conn.Query(ctx, "SELECT short_url, full_url FROM urls WHERE user_id = $1", userID)
+	rows, err := s.conn.Query(ctx, "SELECT short_url, full_url FROM urls WHERE user_id = $1", userID)
 	if err != nil {
-		P.logger.Error("pgstorage:GetUserURLs ", zap.Error(err))
+		s.logger.Error("pgstorage:GetUserURLs ", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 	defer rows.Close()
@@ -99,7 +99,7 @@ func (P *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPa
 	for rows.Next() {
 		err = rows.Scan(&shortURL, &fullURL)
 		if err != nil {
-			P.logger.Error("pgstorage:GetUserURLs Error in row", zap.Error(err))
+			s.logger.Error("pgstorage:GetUserURLs Error in row", zap.Error(err))
 			continue
 		}
 
@@ -112,21 +112,39 @@ func (P *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPa
 	}
 
 	if rows.Err() != nil {
-		P.logger.Error("pgstorage:GetUserURLs Error in rows", zap.Error(err))
+		s.logger.Error("pgstorage:GetUserURLs Error in rows", zap.Error(err))
 		return nil, rows.Err()
 	}
 
 	return result, nil
 }
 
-func (P *PGStorage) OffloadStorage(ctx context.Context, filepath string) error {
+func (s *PGStorage) DeleteURLs(ctx context.Context, userID string, urls []string) error {
+	params, subQuery := helpers.FillParameters(userID, urls)
+
+	query := "UPDATE urls SET deleted_flag = TRUE WHERE user_id = $1 AND short_url IN (" + subQuery + ")"
+
+	result, err := s.conn.Exec(ctx, query, userID, params)
+	if err != nil {
+		s.logger.Error("pgstorage:DeleteURLs ", zap.Error(err))
+		return errs.ErrInternalServerError
+	}
+
+	if result.RowsAffected() == 0 {
+		return errs.ErrUserMismatch
+	}
+
 	return nil
 }
 
-func (P *PGStorage) Ping(ctx context.Context) error {
-	return P.conn.Ping(ctx)
+func (s *PGStorage) OffloadStorage(ctx context.Context, filepath string) error {
+	return nil
 }
 
-func (P *PGStorage) Close() {
-	P.conn.Close()
+func (s *PGStorage) Ping(ctx context.Context) error {
+	return s.conn.Ping(ctx)
+}
+
+func (s *PGStorage) Close() {
+	s.conn.Close()
 }

@@ -10,7 +10,7 @@ import (
 type MapStorage struct {
 	storage    map[string]string
 	createdURL map[string]string
-	userLink   map[string][]string
+	userLink   map[string]map[string]struct{}
 	m          sync.RWMutex
 	logger     *zap.Logger
 }
@@ -19,7 +19,7 @@ func newMapStorage(cfg *config.Config, logger *zap.Logger) (*MapStorage, error) 
 	storage := &MapStorage{
 		storage:    make(map[string]string),
 		createdURL: make(map[string]string),
-		userLink:   make(map[string][]string),
+		userLink:   make(map[string]map[string]struct{}),
 		logger:     logger,
 	}
 

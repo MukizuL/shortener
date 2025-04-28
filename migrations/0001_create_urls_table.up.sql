@@ -1,4 +1,4 @@
-CREATE TABLE urls (
+CREATE TABLE IF NOT EXISTS urls (
     id SERIAL PRIMARY KEY,
     user_id UUID,
     short_url TEXT NOT NULL UNIQUE,
