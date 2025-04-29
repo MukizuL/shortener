@@ -1,20 +1,23 @@
 package controller
 
 import (
+	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"github.com/MukizuL/shortener/internal/storage"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Controller struct {
-	storage storage.Repo
-	logger  *zap.Logger
+	jwtService jwtService.JWTServiceInterface
+	storage    storage.Repo
+	logger     *zap.Logger
 }
 
-func newController(storage storage.Repo, logger *zap.Logger) *Controller {
+func newController(jwtService jwtService.JWTServiceInterface, storage storage.Repo, logger *zap.Logger) *Controller {
 	return &Controller{
-		storage: storage,
-		logger:  logger,
+		jwtService: jwtService,
+		storage:    storage,
+		logger:     logger,
 	}
 }
 
