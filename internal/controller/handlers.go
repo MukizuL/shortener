@@ -97,6 +97,11 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if errors.Is(err, errs.ErrGone) {
+			http.Error(w, http.StatusText(http.StatusGone), http.StatusGone)
+			return
+		}
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

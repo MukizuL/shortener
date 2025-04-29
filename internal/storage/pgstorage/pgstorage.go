@@ -73,7 +73,8 @@ func (s *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL
 
 func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	var result string
-	err := s.conn.QueryRow(ctx, `SELECT full_url FROM urls WHERE short_url = $1`, ID).Scan(&result)
+	var deleted bool
+	err := s.conn.QueryRow(ctx, `SELECT full_url, deleted_flag FROM urls WHERE short_url = $1`, ID).Scan(&result, &deleted)
 	if err != nil {
 		s.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
@@ -83,12 +84,16 @@ func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 		return "", errs.ErrNotFound
 	}
 
+	if deleted {
+		return "", errs.ErrGone
+	}
+
 	return result, nil
 }
 
 func (s *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
 	var result []dto.URLPair
-	rows, err := s.conn.Query(ctx, "SELECT short_url, full_url FROM urls WHERE user_id = $1", userID)
+	rows, err := s.conn.Query(ctx, "SELECT short_url, full_url FROM urls WHERE user_id = $1 AND deleted_flag = FALSE", userID)
 	if err != nil {
 		s.logger.Error("pgstorage:GetUserURLs ", zap.Error(err))
 		return nil, errs.ErrInternalServerError
