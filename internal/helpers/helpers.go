@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"time"
@@ -38,21 +37,4 @@ func WriteCookie(w http.ResponseWriter, token string) {
 	}
 
 	http.SetCookie(w, tokenCookie)
-}
-
-func FillParameters(userID string, urls []string) ([]interface{}, string) {
-	query := ""
-
-	params := make([]interface{}, 0, len(urls)+1)
-	params = append(params, userID)
-
-	for i, url := range urls {
-		if i > 0 {
-			query += ","
-		}
-		query += fmt.Sprintf("$%d", i+2)
-		params = append(params, url)
-	}
-
-	return params, query
 }

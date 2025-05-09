@@ -8,6 +8,7 @@ import (
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -125,11 +126,9 @@ func (s *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPa
 }
 
 func (s *PGStorage) DeleteURLs(ctx context.Context, userID string, urls []string) error {
-	params, subQuery := helpers.FillParameters(userID, urls)
+	query := "UPDATE urls SET deleted_flag = TRUE WHERE user_id = $1 AND short_url ANY($2)"
 
-	query := "UPDATE urls SET deleted_flag = TRUE WHERE user_id = $1 AND short_url IN (" + subQuery + ")"
-
-	result, err := s.conn.Exec(ctx, query, userID, params)
+	result, err := s.conn.Exec(ctx, query, userID, pq.Array(urls))
 	if err != nil {
 		s.logger.Error("pgstorage:DeleteURLs ", zap.Error(err))
 		return errs.ErrInternalServerError
