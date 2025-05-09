@@ -8,19 +8,19 @@ import (
 )
 
 type MapStorage struct {
-	storage    map[string]string
-	createdURL map[string]string
-	userLink   map[string]map[string]struct{}
-	m          sync.RWMutex
-	logger     *zap.Logger
+	FullURLStorage  map[string]string            // FullURLStorage[ShortURL]FullURL
+	ShortURLStorage map[string]string            // ShortURLStorage[FullURL]ShortURL
+	UserLinkStorage map[string]map[string]string // UserLinkStorage[UserID][ShortURL]FullURL
+	m               sync.RWMutex
+	logger          *zap.Logger
 }
 
 func newMapStorage(cfg *config.Config, logger *zap.Logger) (*MapStorage, error) {
 	storage := &MapStorage{
-		storage:    make(map[string]string),
-		createdURL: make(map[string]string),
-		userLink:   make(map[string]map[string]struct{}),
-		logger:     logger,
+		FullURLStorage:  make(map[string]string),
+		ShortURLStorage: make(map[string]string),
+		UserLinkStorage: make(map[string]map[string]string),
+		logger:          logger,
 	}
 
 	err := storage.LoadStorage(cfg.Filepath)
