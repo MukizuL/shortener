@@ -3,6 +3,7 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
@@ -13,6 +14,9 @@ import (
 )
 
 func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+	const batchSize = 2
+	const numCols = 3
+
 	result := make([]dto.BatchResponse, 0, len(data))
 
 	tx, err := s.conn.Begin(ctx)
@@ -22,9 +26,23 @@ func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 	}
 	defer tx.Rollback(ctx)
 
-	for _, v := range data {
-		ID := helpers.RandomString(6)
-		_, err = tx.Exec(ctx, `INSERT INTO urls (user_id, short_url, full_url) VALUES ($1, $2, $3)`, userID, ID, v.OriginalURL)
+	batches := helpers.SplitIntoBatches(data, batchSize)
+
+	for _, batch := range batches {
+		numRows := len(batch)
+		args := make([]interface{}, 0, numRows*numCols)
+		for _, item := range batch {
+			ID := helpers.RandomString(6)
+			args = append(args, userID, ID, item.OriginalURL)
+
+			result = append(result, dto.BatchResponse{CorrelationID: item.CorrelationID, ShortURL: urlBase + ID})
+		}
+
+		valuesPart := helpers.BuildValuePlaceholders(numCols, numRows)
+
+		query := fmt.Sprintf("INSERT INTO urls (user_id, short_url, full_url) VALUES %s", valuesPart)
+
+		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -37,8 +55,6 @@ func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 			s.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
 			return nil, errs.ErrInternalServerError
 		}
-
-		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: urlBase + ID})
 	}
 
 	err = tx.Commit(ctx)
