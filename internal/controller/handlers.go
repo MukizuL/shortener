@@ -114,9 +114,14 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	cookie, err := r.Cookie("Access-token")
-	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	_, userID, err := c.jwtService.ValidateToken(cookie.Value)
