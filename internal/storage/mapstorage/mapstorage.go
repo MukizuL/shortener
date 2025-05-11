@@ -13,62 +13,122 @@ import (
 	"os"
 )
 
-func (r *MapStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
-	r.m.Lock()
-	defer r.m.Unlock()
+func (s *MapStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	if v, exist := r.createdURL[fullURL]; exist {
+	if v, exist := s.ShortURLStorage[fullURL]; exist {
 		return urlBase + v, errs.ErrDuplicate
 	}
 
 	ID := helpers.RandomString(6)
 	shortURL := urlBase + ID
 
-	r.createdURL[fullURL] = ID
+	s.ShortURLStorage[fullURL] = ID
 
-	r.storage[ID] = fullURL
+	s.FullURLStorage[ID] = fullURL
+
+	if _, ok := s.UserLinkStorage[userID]; !ok {
+		s.UserLinkStorage[userID] = make(map[string]string)
+	}
+
+	s.UserLinkStorage[userID][ID] = fullURL
 
 	return shortURL, nil
 }
 
-func (r *MapStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
-	r.m.Lock()
-	defer r.m.Unlock()
+func (s *MapStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	result := make([]dto.BatchResponse, 0, len(data))
 
 	for _, v := range data {
-		if _, exist := r.createdURL[v.OriginalURL]; exist {
+		if _, exist := s.ShortURLStorage[v.OriginalURL]; exist {
 			return nil, errs.ErrDuplicate
 		}
 
 		ID := helpers.RandomString(6)
 		shortURL := urlBase + ID
 
-		r.createdURL[v.OriginalURL] = ID
+		s.ShortURLStorage[v.OriginalURL] = ID
 
 		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: shortURL})
 
-		r.storage[ID] = v.OriginalURL
+		s.FullURLStorage[ID] = v.OriginalURL
+
+		if _, ok := s.UserLinkStorage[userID]; !ok {
+			s.UserLinkStorage[userID] = make(map[string]string)
+		}
+
+		s.UserLinkStorage[userID][ID] = v.OriginalURL
 	}
 
 	return result, nil
 }
 
-func (r *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
-	r.m.RLock()
-	defer r.m.RUnlock()
+func (s *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
 
-	if val, exist := r.storage[ID]; !exist {
+	if val, exist := s.FullURLStorage[ID]; !exist {
 		return "", errs.ErrNotFound
 	} else {
 		return val, nil
 	}
 }
 
-func (r *MapStorage) LoadStorage(filepath string) error {
-	r.m.Lock()
-	defer r.m.Unlock()
+func (s *MapStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
+	s.m.RLock()
+	defer s.m.RUnlock()
+
+	var result []dto.URLPair
+
+	data, ok := s.UserLinkStorage[userID]
+	if !ok {
+		return nil, errs.ErrNotFound
+	}
+
+	for k := range data {
+		fullURL := s.FullURLStorage[k]
+		pair := dto.URLPair{
+			ShortURL:    k,
+			OriginalURL: fullURL,
+		}
+
+		result = append(result, pair)
+	}
+
+	return result, nil
+}
+
+func (s *MapStorage) DeleteURLs(ctx context.Context, userID string, urls []string) error {
+	userURLs, ok := s.UserLinkStorage[userID]
+	if !ok {
+		return errs.ErrNotFound
+	}
+
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	for _, url := range urls {
+		if _, ok = userURLs[url]; !ok {
+			return errs.ErrUserMismatch
+		}
+
+		fullURL := s.FullURLStorage[url]
+
+		delete(s.UserLinkStorage[userID], url)
+		delete(s.FullURLStorage, fullURL)
+		delete(s.ShortURLStorage, url)
+	}
+
+	return nil
+}
+
+func (s *MapStorage) LoadStorage(filepath string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -76,7 +136,7 @@ func (r *MapStorage) LoadStorage(filepath string) error {
 			return nil
 		}
 
-		r.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
+		s.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
 		return errs.ErrInternalServerError
 	}
 
@@ -89,46 +149,54 @@ func (r *MapStorage) LoadStorage(filepath string) error {
 			return nil
 		}
 
-		r.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
+		s.logger.Error("mapstorage:LoadStorage Error opening file", zap.Error(err))
 		return errs.ErrInternalServerError
 	}
 
 	for _, entry := range data {
-		r.storage[entry.ShortURL] = entry.OriginalURL
-		r.createdURL[entry.OriginalURL] = entry.ShortURL
+		if _, ok := s.UserLinkStorage[entry.UserID]; !ok {
+			s.UserLinkStorage[entry.UserID] = make(map[string]string)
+		}
+
+		s.FullURLStorage[entry.ShortURL] = entry.OriginalURL
+		s.ShortURLStorage[entry.OriginalURL] = entry.ShortURL
+		s.UserLinkStorage[entry.UserID][entry.ShortURL] = entry.OriginalURL
 	}
 
 	return nil
 }
 
-func (r *MapStorage) OffloadStorage(ctx context.Context, filepath string) error {
-	r.m.Lock()
-	defer r.m.Unlock()
+func (s *MapStorage) OffloadStorage(ctx context.Context, filepath string) error {
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		r.logger.Error("mapstorage:OffloadStorage Error opening file", zap.Error(err))
+		s.logger.Error("mapstorage:OffloadStorage Error opening file", zap.Error(err))
 		return errs.ErrInternalServerError
 	}
 	defer file.Close()
 
 	var data []models.Urls
-	for k, v := range r.storage {
-		data = append(data, models.Urls{
-			ShortURL:    k,
-			OriginalURL: v,
-		})
+	for k, v := range s.UserLinkStorage {
+		for kInner, vInner := range v {
+			data = append(data, models.Urls{
+				UserID:      k,
+				ShortURL:    kInner,
+				OriginalURL: vInner,
+			})
+		}
 	}
 
 	err = json.NewEncoder(file).Encode(&data)
 	if err != nil {
-		r.logger.Error("mapstorage:OffloadStorage Error encoding data", zap.Error(err))
+		s.logger.Error("mapstorage:OffloadStorage Error encoding data", zap.Error(err))
 		return errs.ErrInternalServerError
 	}
 
 	return nil
 }
 
-func (r *MapStorage) Ping(ctx context.Context) error {
+func (s *MapStorage) Ping(ctx context.Context) error {
 	return nil
 }

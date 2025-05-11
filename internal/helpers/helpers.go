@@ -2,8 +2,10 @@ package helpers
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -23,4 +25,46 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+func WriteCookie(w http.ResponseWriter, token string) {
+	tokenCookie := &http.Cookie{
+		Name:     "Access-token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   876000,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteDefaultMode,
+	}
+
+	http.SetCookie(w, tokenCookie)
+}
+
+func SplitIntoBatches[T any](items []T, batchSize int) [][]T {
+	batches := make([][]T, 0, (len(items)+batchSize-1)/batchSize)
+
+	for batchSize < len(items) {
+		batches = append(batches, items[0:batchSize:batchSize])
+		items = items[batchSize:]
+	}
+	if len(items) > 0 {
+		batches = append(batches, items)
+	}
+
+	return batches
+}
+
+func BuildValuePlaceholders(numCols, numRows int) string {
+	placeholders := make([]string, 0, numRows)
+
+	for i := 0; i < numRows; i++ {
+		single := make([]string, numCols)
+		for j := 0; j < numCols; j++ {
+			single[j] = fmt.Sprintf("$%d", i*numCols+j+1)
+		}
+		placeholders = append(placeholders, fmt.Sprintf("(%s)", strings.Join(single, ", ")))
+	}
+
+	return strings.Join(placeholders, ", ")
 }

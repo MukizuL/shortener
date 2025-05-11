@@ -3,27 +3,46 @@ package pgstorage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
-func (P *PGStorage) BatchCreateShortURL(ctx context.Context, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase string, data []dto.BatchRequest) ([]dto.BatchResponse, error) {
+	const batchSize = 2
+	const numCols = 3
+
 	result := make([]dto.BatchResponse, 0, len(data))
 
-	tx, err := P.conn.Begin(ctx)
+	tx, err := s.conn.Begin(ctx)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
+		s.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 	defer tx.Rollback(ctx)
 
-	for _, v := range data {
-		ID := helpers.RandomString(6)
-		_, err = tx.Exec(ctx, `INSERT INTO urls (short_url, full_url) VALUES ($1, $2)`, ID, v.OriginalURL)
+	batches := helpers.SplitIntoBatches(data, batchSize)
+
+	for _, batch := range batches {
+		numRows := len(batch)
+		args := make([]interface{}, 0, numRows*numCols)
+		for _, item := range batch {
+			ID := helpers.RandomString(6)
+			args = append(args, userID, ID, item.OriginalURL)
+
+			result = append(result, dto.BatchResponse{CorrelationID: item.CorrelationID, ShortURL: urlBase + ID})
+		}
+
+		valuesPart := helpers.BuildValuePlaceholders(numCols, numRows)
+
+		query := fmt.Sprintf("INSERT INTO urls (user_id, short_url, full_url) VALUES %s", valuesPart)
+
+		_, err = tx.Exec(ctx, query, args...)
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) {
@@ -33,49 +52,48 @@ func (P *PGStorage) BatchCreateShortURL(ctx context.Context, urlBase string, dat
 				}
 			}
 
-			P.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
+			s.logger.Error("pgstorage:BatchCreateShortURL other pg error", zap.Error(pgErr))
 			return nil, errs.ErrInternalServerError
 		}
-
-		result = append(result, dto.BatchResponse{CorrelationID: v.CorrelationID, ShortURL: urlBase + ID})
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		P.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
+		s.logger.Error("pgstorage:BatchCreateShortURL ", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 
 	return result, nil
 }
 
-func (P *PGStorage) CreateShortURL(ctx context.Context, urlBase, fullURL string) (string, error) {
+func (s *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
-	err := P.conn.QueryRow(ctx, `INSERT INTO urls (short_url, full_url)
-										VALUES ($1, $2)
+	err := s.conn.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
+										VALUES ($1, $2, $3)
 										ON CONFLICT(full_url)
 										DO UPDATE SET full_url = urls.full_url
-										RETURNING short_url`, ID, fullURL).Scan(&ID)
+										RETURNING short_url`, userID, ID, fullURL).Scan(&ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return P.CreateShortURL(ctx, urlBase, fullURL)
+				return s.CreateShortURL(ctx, userID, urlBase, fullURL)
 			}
 		}
 
-		P.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
+		s.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 
 	return urlBase + ID, nil
 }
 
-func (P *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
+func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	var result string
-	err := P.conn.QueryRow(ctx, `SELECT full_url FROM urls WHERE short_url = $1`, ID).Scan(&result)
+	var deleted bool
+	err := s.conn.QueryRow(ctx, `SELECT full_url, deleted_flag FROM urls WHERE short_url = $1`, ID).Scan(&result, &deleted)
 	if err != nil {
-		P.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
+		s.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
 	}
 
@@ -83,17 +101,70 @@ func (P *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 		return "", errs.ErrNotFound
 	}
 
+	if deleted {
+		return "", errs.ErrGone
+	}
+
 	return result, nil
 }
 
-func (P *PGStorage) OffloadStorage(ctx context.Context, filepath string) error {
+func (s *PGStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
+	var result []dto.URLPair
+	rows, err := s.conn.Query(ctx, "SELECT short_url, full_url FROM urls WHERE user_id = $1 AND deleted_flag = FALSE", userID)
+	if err != nil {
+		s.logger.Error("pgstorage:GetUserURLs ", zap.Error(err))
+		return nil, errs.ErrInternalServerError
+	}
+	defer rows.Close()
+
+	var shortURL, fullURL string
+	for rows.Next() {
+		err = rows.Scan(&shortURL, &fullURL)
+		if err != nil {
+			s.logger.Error("pgstorage:GetUserURLs Error in row", zap.Error(err))
+			continue
+		}
+
+		data := dto.URLPair{
+			ShortURL:    shortURL,
+			OriginalURL: fullURL,
+		}
+
+		result = append(result, data)
+	}
+
+	if rows.Err() != nil {
+		s.logger.Error("pgstorage:GetUserURLs Error in rows", zap.Error(err))
+		return nil, rows.Err()
+	}
+
+	return result, nil
+}
+
+func (s *PGStorage) DeleteURLs(ctx context.Context, userID string, urls []string) error {
+	query := "UPDATE urls SET deleted_flag = TRUE WHERE user_id = $1 AND short_url ANY($2)"
+
+	result, err := s.conn.Exec(ctx, query, userID, pq.Array(urls))
+	if err != nil {
+		s.logger.Error("pgstorage:DeleteURLs ", zap.Error(err))
+		return errs.ErrInternalServerError
+	}
+
+	if result.RowsAffected() == 0 {
+		return errs.ErrUserMismatch
+	}
+
 	return nil
 }
 
-func (P *PGStorage) Ping(ctx context.Context) error {
-	return P.conn.Ping(ctx)
+func (s *PGStorage) OffloadStorage(ctx context.Context, filepath string) error {
+	return nil
 }
 
-func (P *PGStorage) Close() {
-	P.conn.Close()
+func (s *PGStorage) Ping(ctx context.Context) error {
+	return s.conn.Ping(ctx)
+}
+
+func (s *PGStorage) Close() {
+	s.conn.Close()
 }

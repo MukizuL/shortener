@@ -6,19 +6,22 @@ import (
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
-	"os"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 var ErrMalformedFlags = errors.New("error parsing flags")
+var ErrMalformedAddr = errors.New("address of wrong format")
+var ErrMalformedBase = errors.New("base should be an url")
 
 type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`
 	Base     string `env:"BASE_URL"`
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
+	Key      string `env:"PRIVATE_KEY"`
 }
 
 // NewConfig fetches parameters, firstly from env variables, secondly from flags
@@ -31,11 +34,11 @@ func NewConfig() *Config {
 	}
 
 	if result.Addr == "" {
-		flag.StringVar(&result.Addr, "a", "localhost:8080", "Sets server address.")
+		flag.StringVar(&result.Addr, "a", "0.0.0.0:8080", "Sets server address.")
 	}
 
 	if result.Base == "" {
-		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: string1/string2")
+		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/*")
 	}
 
 	absPath, _ := filepath.Abs("./storage.json")
@@ -53,39 +56,46 @@ func NewConfig() *Config {
 	err = checkParams(result)
 	if err != nil {
 		flag.Usage()
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	return result
 }
 
-func checkParams(data *Config) error {
-	if data.Addr != "" {
-		addr := strings.Split(data.Addr, ":")
+func checkParams(cfg *Config) error {
+	if cfg.Addr != "" {
+		addr := strings.Split(cfg.Addr, ":")
 		if len(addr) != 2 {
-			return ErrMalformedFlags
+			return ErrMalformedAddr
 		}
 
 		_, err := strconv.Atoi(addr[1])
 		if err != nil {
-			return ErrMalformedFlags
+			return ErrMalformedAddr
 		}
 	}
 
-	if data.Base != "" {
-		if string(data.Base[0]) == "/" || string(data.Base[len(data.Base)-1]) == "/" {
-			return ErrMalformedFlags
+	if cfg.Base != "" {
+		parsedURL, err := url.Parse(cfg.Base)
+		if err != nil {
+			return ErrMalformedBase
 		}
+
+		cfg.Base = strings.TrimSuffix(parsedURL.RequestURI(), "/")
 	}
 
-	if !filepath.IsAbs(data.Filepath) {
-		temp, err := filepath.Abs(data.Filepath)
+	if !filepath.IsAbs(cfg.Filepath) {
+		temp, err := filepath.Abs(cfg.Filepath)
 		if err != nil {
 			return ErrMalformedFlags
 		}
 
-		data.Filepath = temp
+		cfg.Filepath = temp
 	}
+
+	//if cfg.Key == "" {
+	//	return fmt.Errorf("missing private key in PRIVATE_KEY env")
+	//}
 
 	return nil
 }

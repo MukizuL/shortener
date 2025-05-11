@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
@@ -37,7 +38,9 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
@@ -74,11 +77,64 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if errors.Is(err, errs.ErrGone) {
+			http.Error(w, http.StatusText(http.StatusGone), http.StatusGone)
+			return
+		}
+
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
+}
+
+func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+
+	data, err := c.storage.GetUserURLs(ctx, userID)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			http.Error(w, http.StatusText(http.StatusNoContent), http.StatusNoContent)
+			return
+		}
+
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusOK, data)
+}
+
+func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+
+	var urls []string
+
+	err := json.NewDecoder(r.Body).Decode(&urls)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	err = c.storage.DeleteURLs(ctx, userID, urls)
+	if err != nil {
+		if errors.Is(err, errs.ErrUserMismatch) {
+			helpers.WriteJSON(w, http.StatusUnauthorized, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnauthorized)})
+			return
+		}
+
+		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	helpers.WriteJSON(w, http.StatusAccepted, http.StatusText(http.StatusAccepted))
 }
 
 func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +159,9 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	shortURL, err := c.storage.CreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), url.String())
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
@@ -143,7 +201,9 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	response, err := c.storage.BatchCreateShortURL(ctx, fmt.Sprintf("http://%s/", r.Host), req)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+
+	response, err := c.storage.BatchCreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
