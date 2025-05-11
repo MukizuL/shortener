@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
@@ -37,7 +38,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
@@ -92,7 +93,7 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
 	data, err := c.storage.GetUserURLs(ctx, userID)
 	if err != nil {
@@ -112,7 +113,7 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
 	var urls []string
 
@@ -158,7 +159,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
@@ -200,7 +201,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
 	response, err := c.storage.BatchCreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {

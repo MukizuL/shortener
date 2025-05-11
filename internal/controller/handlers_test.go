@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	mockstorage "github.com/MukizuL/shortener/internal/storage/mocks"
@@ -89,7 +90,7 @@ func TestApplication_CreateShortURL(t *testing.T) {
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			r.Host = "localhost:8080"
-			r = r.Clone(context.WithValue(r.Context(), "userID", "1"))
+			r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, "1"))
 
 			w := httptest.NewRecorder()
 			c.CreateShortURL(w, r)
@@ -296,7 +297,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
 			r.Header.Set("Content-Type", "application/json")
 			r.Host = "localhost:8080"
-			r = r.Clone(context.WithValue(r.Context(), "userID", "1"))
+			r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, "1"))
 
 			w := httptest.NewRecorder()
 			c.CreateShortURLJSON(w, r)

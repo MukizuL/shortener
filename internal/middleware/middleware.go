@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/helpers"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"go.uber.org/fx"
@@ -13,6 +14,10 @@ import (
 	"strings"
 	"time"
 )
+
+type userIDKey string
+
+var key userIDKey = "userID"
 
 type MiddlewareService struct {
 	jwtService jwtService.JWTServiceInterface
@@ -103,7 +108,7 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 			}
 		}
 
-		r = r.Clone(context.WithValue(r.Context(), "userID", userID))
+		r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, userID))
 
 		h.ServeHTTP(w, r)
 
