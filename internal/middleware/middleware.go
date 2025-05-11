@@ -2,6 +2,10 @@ package mw
 
 import (
 	"compress/gzip"
+	"context"
+	"errors"
+	"github.com/MukizuL/shortener/internal/helpers"
+	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"io"
@@ -11,12 +15,14 @@ import (
 )
 
 type MiddlewareService struct {
-	logger *zap.Logger
+	jwtService jwtService.JWTServiceInterface
+	logger     *zap.Logger
 }
 
-func NewMiddlewareService(logger *zap.Logger) *MiddlewareService {
+func NewMiddlewareService(jwtService jwtService.JWTServiceInterface, logger *zap.Logger) *MiddlewareService {
 	return &MiddlewareService{
-		logger: logger,
+		jwtService: jwtService,
+		logger:     logger,
 	}
 }
 
@@ -71,5 +77,36 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 			},
 			Writer: gz,
 		}, r)
+	})
+}
+
+func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("Access-token")
+		if err != nil && !errors.Is(err, http.ErrNoCookie) {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var token, userID string
+		if errors.Is(err, http.ErrNoCookie) {
+			token, userID, err = s.jwtService.CreateToken()
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			token, userID, err = s.jwtService.ValidateToken(cookie.Value)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		r = r.Clone(context.WithValue(r.Context(), "userID", userID))
+
+		h.ServeHTTP(w, r)
+
+		helpers.WriteCookie(w, token)
 	})
 }

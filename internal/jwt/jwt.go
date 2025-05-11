@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-//go:generate mockgen -source=jwt.go -destination=mocks/jwt.go -package=mockjwtservice
-
 type JWTServiceInterface interface {
 	ValidateToken(token string) (string, string, error)
 	CreateToken() (string, string, error)

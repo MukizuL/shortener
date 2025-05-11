@@ -37,26 +37,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, err := r.Cookie("Access-token")
-	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	var token, userID string
-	if errors.Is(err, http.ErrNoCookie) {
-		token, userID, err = c.jwtService.CreateToken()
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value("userID").(string)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
@@ -68,8 +49,6 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
-	helpers.WriteCookie(w, token)
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -113,34 +92,7 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	cookie, err := r.Cookie("Access-token")
-	if err != nil {
-		if errors.Is(err, http.ErrNoCookie) {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		} else {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	_, userID, err := c.jwtService.ValidateToken(cookie.Value)
-	if err != nil {
-		c.logger.Error("GetURLs Failed to validate token", zap.Error(err))
-
-		if errors.Is(err, errs.ErrNotAuthorized) {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	userID := r.Context().Value("userID").(string)
 
 	data, err := c.storage.GetUserURLs(ctx, userID)
 	if err != nil {
@@ -160,33 +112,11 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	cookie, err := r.Cookie("Access-token")
-	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	_, userID, err := c.jwtService.ValidateToken(cookie.Value)
-	if err != nil {
-		c.logger.Error("GetURLs Failed to validate token", zap.Error(err))
-
-		if errors.Is(err, errs.ErrNotAuthorized) {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+	userID := r.Context().Value("userID").(string)
 
 	var urls []string
 
-	err = json.NewDecoder(r.Body).Decode(&urls)
+	err := json.NewDecoder(r.Body).Decode(&urls)
 	if err != nil {
 		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
 		return
@@ -228,26 +158,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	cookie, err := r.Cookie("Access-token")
-	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	var token, userID string
-	if errors.Is(err, http.ErrNoCookie) {
-		token, userID, err = c.jwtService.CreateToken()
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value("userID").(string)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
@@ -261,8 +172,6 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	}
 
 	out := &dto.Response{Result: shortURL}
-
-	helpers.WriteCookie(w, token)
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
@@ -291,26 +200,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	cookie, err := r.Cookie("Access-token")
-	if err != nil && !errors.Is(err, http.ErrNoCookie) {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	var token, userID string
-	if errors.Is(err, http.ErrNoCookie) {
-		token, userID, err = c.jwtService.CreateToken()
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		token, userID, err = c.jwtService.ValidateToken(cookie.Value)
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-	}
+	userID := r.Context().Value("userID").(string)
 
 	response, err := c.storage.BatchCreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), req)
 	if err != nil {
@@ -322,8 +212,6 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
 		return
 	}
-
-	helpers.WriteCookie(w, token)
 
 	helpers.WriteJSON(w, http.StatusCreated, response)
 }

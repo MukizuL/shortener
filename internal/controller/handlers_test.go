@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
-	mocksjwtservice "github.com/MukizuL/shortener/internal/jwt/mocks"
 	mockstorage "github.com/MukizuL/shortener/internal/storage/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -27,11 +26,10 @@ func TestApplication_CreateShortURL(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		body           string
-		mockStorage    func(m *mockstorage.MockRepo)
-		mockJWTService func(m *mocksjwtservice.MockJWTServiceInterface)
-		want           want
+		name        string
+		body        string
+		mockStorage func(m *mockstorage.MockRepo)
+		want        want
 	}{
 		{
 			name: "Correct working",
@@ -40,11 +38,6 @@ func TestApplication_CreateShortURL(t *testing.T) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
-			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
-				m.EXPECT().
-					CreateToken().
-					Return("", "", nil)
 			},
 			want: want{
 				contentType: "text/plain",
@@ -60,11 +53,6 @@ func TestApplication_CreateShortURL(t *testing.T) {
 					CreateShortURL(gomock.Any(), gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("", errs.ErrDuplicate)
 			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
-				m.EXPECT().
-					CreateToken().
-					Return("", "", nil)
-			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  409,
@@ -75,9 +63,6 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			name: "Incorrect URL #1",
 			body: "https://",
 			mockStorage: func(m *mockstorage.MockRepo) {
-
-			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
 
 			},
 			want: want{
@@ -98,18 +83,14 @@ func TestApplication_CreateShortURL(t *testing.T) {
 				tt.mockStorage(mockRepo)
 			}
 
-			mockJWTService := mocksjwtservice.NewMockJWTServiceInterface(ctrl)
-			if tt.mockJWTService != nil {
-				tt.mockJWTService(mockJWTService)
-			}
-
 			c := &Controller{
-				jwtService: mockJWTService,
-				storage:    mockRepo,
+				storage: mockRepo,
 			}
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
 			r.Host = "localhost:8080"
+			r = r.Clone(context.WithValue(r.Context(), "userID", "1"))
+
 			w := httptest.NewRecorder()
 			c.CreateShortURL(w, r)
 
@@ -224,11 +205,10 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		body           string
-		mockStorage    func(m *mockstorage.MockRepo)
-		mockJWTService func(m *mocksjwtservice.MockJWTServiceInterface)
-		want           want
+		name        string
+		body        string
+		mockStorage func(m *mockstorage.MockRepo)
+		want        want
 	}{
 		{
 			name: "Correct working",
@@ -237,11 +217,6 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", nil)
-			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
-				m.EXPECT().
-					CreateToken().
-					Return("", "", nil)
 			},
 			want: want{
 				contentType: "application/json",
@@ -257,11 +232,6 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 					CreateShortURL(gomock.Any(), gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
 					Return("http://localhost:8080/qxDvSD", errs.ErrDuplicate)
 			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
-				m.EXPECT().
-					CreateToken().
-					Return("", "", nil)
-			},
 			want: want{
 				contentType: "application/json",
 				statusCode:  409,
@@ -272,9 +242,6 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			name: "Incorrect URL #1",
 			body: "https://",
 			mockStorage: func(m *mockstorage.MockRepo) {
-
-			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
 
 			},
 			want: want{
@@ -289,9 +256,6 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			mockStorage: func(m *mockstorage.MockRepo) {
 
 			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
-
-			},
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
@@ -302,9 +266,6 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			name: "Empty URL",
 			body: "",
 			mockStorage: func(m *mockstorage.MockRepo) {
-
-			},
-			mockJWTService: func(m *mocksjwtservice.MockJWTServiceInterface) {
 
 			},
 			want: want{
@@ -325,14 +286,8 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 				tt.mockStorage(mockRepo)
 			}
 
-			mockJWTService := mocksjwtservice.NewMockJWTServiceInterface(ctrl)
-			if tt.mockJWTService != nil {
-				tt.mockJWTService(mockJWTService)
-			}
-
 			c := &Controller{
-				jwtService: mockJWTService,
-				storage:    mockRepo,
+				storage: mockRepo,
 			}
 
 			data, err := json.Marshal(&dto.Request{FullURL: tt.body})
@@ -341,6 +296,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", bytes.NewReader(data))
 			r.Header.Set("Content-Type", "application/json")
 			r.Host = "localhost:8080"
+			r = r.Clone(context.WithValue(r.Context(), "userID", "1"))
 
 			w := httptest.NewRecorder()
 			c.CreateShortURLJSON(w, r)
