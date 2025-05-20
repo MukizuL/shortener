@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/controller"
+	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	mw "github.com/MukizuL/shortener/internal/middleware"
 	"github.com/MukizuL/shortener/internal/router"
 	"github.com/MukizuL/shortener/internal/server"
@@ -26,6 +27,7 @@ func createApp() fx.Option {
 		controller.Provide(),
 		router.Provide(),
 		server.Provide(),
+		jwtService.Provide(),
 
 		pgstorage.Provide(),
 		mapstorage.Provide(),
