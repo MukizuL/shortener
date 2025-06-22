@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+//go:generate mockgen -source=jwt.go -destination=mocks/jwt.go -package=mockjwt
+
 type JWTServiceInterface interface {
 	ValidateToken(token string) (string, string, error)
 	CreateToken() (string, string, error)
@@ -40,7 +42,6 @@ func (s *JWTService) ValidateToken(token string) (string, string, error) {
 
 		return s.key, nil
 	})
-
 	if err != nil {
 		return "", "", err
 	}
