@@ -72,7 +72,7 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 
 	fullURL, err := c.storage.GetLongURL(ctx, ID)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
+		if errors.Is(err, errs.ErrURLNotFound) {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}
@@ -97,11 +97,6 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 
 	data, err := c.storage.GetUserURLs(ctx, userID)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			http.Error(w, http.StatusText(http.StatusNoContent), http.StatusNoContent)
-			return
-		}
-
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
