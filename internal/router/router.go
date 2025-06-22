@@ -1,11 +1,14 @@
 package router
 
 import (
+	"expvar"
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/controller"
 	mw "github.com/MukizuL/shortener/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
+	"net/http"
+	"net/http/pprof"
 )
 
 func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Controller) *chi.Mux {
@@ -21,6 +24,35 @@ func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Contr
 	r.With(mw.Authorization).Delete(cfg.Base+"/api/user/urls", c.DeleteURLs)
 	r.With(mw.Authorization).Post(cfg.Base+"/api/shorten", c.CreateShortURLJSON)
 	r.With(mw.Authorization).Post(cfg.Base+"/api/shorten/batch", c.BatchCreateShortURLJSON)
+
+	r.Mount("/debug", Profiler())
+
+	return r
+}
+
+func Profiler() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, r.RequestURI+"/pprof/", http.StatusMovedPermanently)
+	})
+	r.HandleFunc("/pprof", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, r.RequestURI+"/", http.StatusMovedPermanently)
+	})
+
+	r.HandleFunc("/pprof/*", pprof.Index)
+	r.HandleFunc("/pprof/cmdline", pprof.Cmdline)
+	r.HandleFunc("/pprof/profile", pprof.Profile)
+	r.HandleFunc("/pprof/symbol", pprof.Symbol)
+	r.HandleFunc("/pprof/trace", pprof.Trace)
+	r.Handle("/vars", expvar.Handler())
+
+	r.Handle("/pprof/goroutine", pprof.Handler("goroutine"))
+	r.Handle("/pprof/threadcreate", pprof.Handler("threadcreate"))
+	r.Handle("/pprof/mutex", pprof.Handler("mutex"))
+	r.Handle("/pprof/heap", pprof.Handler("heap"))
+	r.Handle("/pprof/block", pprof.Handler("block"))
+	r.Handle("/pprof/allocs", pprof.Handler("allocs"))
 
 	return r
 }
