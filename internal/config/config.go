@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"github.com/MukizuL/shortener/docs"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
@@ -97,7 +98,14 @@ func checkParams(cfg *Config) error {
 	//	return fmt.Errorf("missing private key in PRIVATE_KEY env")
 	//}
 
+	setSwagger(cfg)
+
 	return nil
+}
+
+func setSwagger(cfg *Config) {
+	docs.SwaggerInfo.Host = cfg.Addr
+	docs.SwaggerInfo.BasePath = cfg.Base
 }
 
 func Provide() fx.Option {

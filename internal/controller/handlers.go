@@ -17,6 +17,22 @@ import (
 	"time"
 )
 
+// CreateShortURL godoc
+//
+//	@Summary		Creates short url
+//	@Description	If cookie with access token is not provided, creates a new token with new userID.
+//	@Tags			default
+//	@Accept			text/plain
+//	@Produce		text/plain
+//	@Param			Cookie	header		string		false	"Cookie with access token"
+//	@Param			URL		body		string		true	"URL to shorten"
+//	@Success		201		body		string		"Short url"
+//	@Header			201		{string}	Set-cookie	"Access token"
+//	@Failure		400		{string}	string		"Wrong URL schema"
+//	@Failure		409		{string}	string		"URL already exists"
+//	@Failure		422		{string}	string		"Not a URL"
+//	@Failure		500		{string}	string		"Internal Server Error"
+//	@Router			/ [post]
 func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -60,6 +76,20 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetFullURL godoc
+//
+//	@Summary	Redirects to original URL
+//	@Tags		default
+//	@Produce	text/html
+//	@Param		Cookie	header	string	true	"Cookie with access token"
+//	@Param		ID		query	string	true	"Short URL ID"
+//	@Success	307
+//	@Header		307	{string}	Location	"Original URL"
+//	@Failure	400	{string}	string		"ID is not present"
+//	@Failure	404	{string}	string		"URL not Found"
+//	@Failure	410	{string}	string		"URL deleted"
+//	@Failure	500	{string}	string		"Internal Server Error"
+//	@Router		/:id [get]
 func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -89,6 +119,15 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fullURL, http.StatusTemporaryRedirect)
 }
 
+// GetURLs godoc
+//
+//	@Summary	Returns array of user URLs
+//	@Tags		json
+//	@Produce	application/json
+//	@Param		Cookie	header		string			true	"Cookie with access token"
+//	@Success	200		{object}	[]dto.URLPair	"Array of URLs"
+//	@Failure	500		{string}	string			"Internal Server Error"
+//	@Router		/api/user/urls [get]
 func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -104,6 +143,18 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, http.StatusOK, data)
 }
 
+// DeleteURLs godoc
+//
+//	@Summary	Deletes user URLs
+//	@Tags		json
+//	@Accept		application/json
+//	@Produce	application/json
+//	@Param		Cookie	header		string		true	"Cookie with access token"
+//	@Param		URLs	body		[]string	true	"URLs to delete"
+//	@Success	202		{string}	string		"Accepted"
+//	@Failure	401		{string}	string		"URL doesn't belong to user"
+//	@Failure	500		{string}	string		"Internal Server Error"
+//	@Router		/api/user/urls [delete]
 func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -132,6 +183,22 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, http.StatusAccepted, http.StatusText(http.StatusAccepted))
 }
 
+// CreateShortURLJSON godoc
+//
+//	@Summary		Creates short URL
+//	@Description	If cookie with access token is not provided, creates a new token with new userID.
+//	@Tags			json
+//	@Accept			application/json
+//	@Produce		application/json
+//	@Param			Cookie	header		string				false	"Cookie with access token"
+//	@Param			URL		body		dto.Request			true	"URL to shorten"
+//	@Success		201		body		dto.Response		"Short url"
+//	@Header			201		{string}	Set-cookie			"Access token"
+//	@Failure		400		{object}	dto.ErrorResponse	"Wrong URL schema"
+//	@Failure		409		{object}	dto.ErrorResponse	"URL already exists"
+//	@Failure		422		{object}	dto.ErrorResponse	"Not a URL"
+//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Router			/api/shorten [post]
 func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
@@ -172,6 +239,22 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
 
+// BatchCreateShortURLJSON godoc
+//
+//	@Summary		Creates a batch of short URLs
+//	@Description	If cookie with access token is not provided, creates a new token with new userID.
+//	@Tags			json
+//	@Accept			application/json
+//	@Produce		application/json
+//	@Param			Cookie	header		string				false	"Cookie with access token"
+//	@Param			URL		body		[]dto.BatchRequest	true	"URLs to shorten"
+//	@Success		201		body		[]dto.BatchResponse	"Short urls"
+//	@Header			201		{string}	Set-cookie			"Access token"
+//	@Failure		400		{object}	dto.ErrorResponse	"Wrong URL schema"
+//	@Failure		409		{object}	dto.ErrorResponse	"URL already exists"
+//	@Failure		422		{object}	dto.ErrorResponse	"Not a URL"
+//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Router			/api/shorten/batch [post]
 func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()

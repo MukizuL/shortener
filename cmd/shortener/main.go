@@ -1,8 +1,10 @@
 package main
 
 import (
-	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/controller"
+	"net/http"
+
+	"github.com/MukizuL/shortener/internal/config"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	mw "github.com/MukizuL/shortener/internal/middleware"
 	"github.com/MukizuL/shortener/internal/router"
@@ -12,8 +14,15 @@ import (
 	"github.com/MukizuL/shortener/internal/storage/pgstorage"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"net/http"
 )
+
+//	@title			Shortener API
+//	@version		1.0
+//	@description	This is a url shortening server.
+
+//	@securityDefinitions.apikey	ApiKeyAuth
+//	@in							cookie
+//	@name						Access-token
 
 func main() {
 	fx.New(createApp(), fx.Invoke(func(*http.Server) {})).Run()
