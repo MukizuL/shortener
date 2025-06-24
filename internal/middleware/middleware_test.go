@@ -49,7 +49,7 @@ func TestApplication_Authorization(t *testing.T) {
 			},
 			cookiePresent: true,
 			cookieValue:   "invalid-token",
-			wantStatus:    http.StatusInternalServerError,
+			wantStatus:    http.StatusUnauthorized,
 			wantSetCookie: false,
 		},
 		{
@@ -81,15 +81,15 @@ func TestApplication_Authorization(t *testing.T) {
 				logger:     logger,
 			}
 
-			req := httptest.NewRequest("GET", "/", nil)
+			r := httptest.NewRequest("GET", "/", nil)
 			if tt.cookiePresent {
-				req.AddCookie(&http.Cookie{
+				r.AddCookie(&http.Cookie{
 					Name:  "Access-token",
 					Value: tt.cookieValue,
 				})
 			}
 
-			rr := httptest.NewRecorder()
+			w := httptest.NewRecorder()
 
 			// Create a simple handler to verify context was set
 			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -108,19 +108,24 @@ func TestApplication_Authorization(t *testing.T) {
 			})
 
 			handler := s.Authorization(nextHandler)
-			handler.ServeHTTP(rr, req)
+			handler.ServeHTTP(w, r)
 
-			if status := rr.Code; status != tt.wantStatus {
+			if status := w.Code; status != tt.wantStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v",
 					status, tt.wantStatus)
 			}
 
+			result := w.Result()
+
 			if tt.wantSetCookie {
-				cookies := rr.Result().Cookies()
+				cookies := result.Cookies()
 				if len(cookies) == 0 {
 					t.Error("expected cookie to be set, but none found")
 				}
 			}
+
+			err = result.Body.Close()
+			assert.NoError(t, err)
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	contextI "github.com/MukizuL/shortener/internal/context"
+	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"go.uber.org/fx"
@@ -35,6 +36,7 @@ func Provide() fx.Option {
 	return fx.Provide(NewMiddlewareService)
 }
 
+// LoggerMW logs request and response.
 func (s *MiddlewareService) LoggerMW(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -85,6 +87,8 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 	})
 }
 
+// Authorization checks for Access-token in cookie. If it's present and valid, sets userID in context.
+// If token is not present, creates a new one. If token is invalid, returns an error.
 func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("Access-token")
@@ -103,6 +107,16 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 		} else {
 			token, userID, err = s.jwtService.ValidateToken(cookie.Value)
 			if err != nil {
+				if errors.Is(err, errs.ErrNotAuthorized) {
+					http.Error(w, err.Error(), http.StatusUnauthorized)
+					return
+				}
+
+				if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
+					http.Error(w, err.Error(), http.StatusUnauthorized)
+					return
+				}
+
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}

@@ -11,6 +11,7 @@ import (
 	"net/http/pprof"
 )
 
+// NewRouter initializes new chi.Mux with routes.
 func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Controller) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(mw.GzipCompress)
@@ -30,6 +31,7 @@ func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Contr
 	return r
 }
 
+// Profiler creates http.Handler with pprof's routes.
 func Profiler() http.Handler {
 	r := chi.NewRouter()
 

@@ -1,3 +1,4 @@
+// Package shortener starts server for shortening URLs.
 package main
 
 import (

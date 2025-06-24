@@ -13,6 +13,7 @@ const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 var seededRand = rand.New(rand.NewSource(time.Now().Unix()))
 
+// RandomString generates string, with variable length, of random characters.
 func RandomString(length int) string {
 	b := make([]byte, length)
 	for i := range b {
@@ -21,12 +22,14 @@ func RandomString(length int) string {
 	return string(b)
 }
 
+// WriteJSON writes status and any object as JSON. Reports no error if Encoder fails.
 func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
 
+// WriteCookie prepares a cookie then sets it in ResponseWriter.
 func WriteCookie(w http.ResponseWriter, token string) {
 	tokenCookie := &http.Cookie{
 		Name:     "Access-token",

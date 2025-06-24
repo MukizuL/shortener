@@ -215,22 +215,22 @@ func TestApplication_GetURLs(t *testing.T) {
 			name: "Correct UserID with links",
 			mockSetup: func(m *mockstorage.MockRepo) {
 				m.EXPECT().GetUserURLs(gomock.Any(), "user1").Return([]dto.URLPair{
-					{"https://link1.com", "https://localhost:8080/1"},
-					{"https://link2.com", "https://localhost:8080/2"},
-					{"https://link3.com", "https://localhost:8080/3"},
-					{"https://link4.com", "https://localhost:8080/4"},
-					{"https://link5.com", "https://localhost:8080/5"},
+					{ShortURL: "https://link1.com", OriginalURL: "https://localhost:8080/1"},
+					{ShortURL: "https://link2.com", OriginalURL: "https://localhost:8080/2"},
+					{ShortURL: "https://link3.com", OriginalURL: "https://localhost:8080/3"},
+					{ShortURL: "https://link4.com", OriginalURL: "https://localhost:8080/4"},
+					{ShortURL: "https://link5.com", OriginalURL: "https://localhost:8080/5"},
 				}, nil)
 			},
 			user: "user1",
 			want: want{
 				statusCode: 200,
 				fullURL: []dto.URLPair{
-					{"https://link1.com", "https://localhost:8080/1"},
-					{"https://link2.com", "https://localhost:8080/2"},
-					{"https://link3.com", "https://localhost:8080/3"},
-					{"https://link4.com", "https://localhost:8080/4"},
-					{"https://link5.com", "https://localhost:8080/5"},
+					{ShortURL: "https://link1.com", OriginalURL: "https://localhost:8080/1"},
+					{ShortURL: "https://link2.com", OriginalURL: "https://localhost:8080/2"},
+					{ShortURL: "https://link3.com", OriginalURL: "https://localhost:8080/3"},
+					{ShortURL: "https://link4.com", OriginalURL: "https://localhost:8080/4"},
+					{ShortURL: "https://link5.com", OriginalURL: "https://localhost:8080/5"},
 				},
 			},
 		},
@@ -385,6 +385,9 @@ func TestApplication_DeleteURLs(t *testing.T) {
 			result := w.Result()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+
+			err = result.Body.Close()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -660,6 +663,9 @@ func TestApplication_BatchCreateShortURLJSON(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want.response.(dto.ErrorResponse).Err, errResp.Err)
 			}
+
+			err = result.Body.Close()
+			assert.NoError(t, err)
 		})
 	}
 }
