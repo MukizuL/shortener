@@ -2,8 +2,9 @@
 package main
 
 import (
-	"github.com/MukizuL/shortener/internal/controller"
 	"net/http"
+
+	"github.com/MukizuL/shortener/internal/controller"
 
 	"github.com/MukizuL/shortener/internal/config"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"

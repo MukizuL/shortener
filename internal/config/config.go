@@ -3,14 +3,15 @@ package config
 import (
 	"errors"
 	"flag"
-	"github.com/MukizuL/shortener/docs"
-	"github.com/caarlos0/env/v11"
-	"go.uber.org/fx"
 	"log"
 	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/MukizuL/shortener/docs"
+	"github.com/caarlos0/env/v11"
+	"go.uber.org/fx"
 )
 
 var ErrMalformedFlags = errors.New("error parsing flags")

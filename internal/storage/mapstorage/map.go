@@ -1,10 +1,11 @@
 package mapstorage
 
 import (
+	"sync"
+
 	"github.com/MukizuL/shortener/internal/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"sync"
 )
 
 type MapStorage struct {

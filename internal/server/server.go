@@ -3,6 +3,11 @@ package server
 import (
 	"context"
 	"errors"
+	"net"
+	"net/http"
+	"path/filepath"
+	"time"
+
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/storage"
 	"github.com/go-chi/chi/v5"
@@ -11,10 +16,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
-	"path/filepath"
-	"time"
 )
 
 func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.Logger, storage storage.Repo) *http.Server {

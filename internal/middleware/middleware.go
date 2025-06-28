@@ -4,16 +4,17 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
 
 type userIDKey string
