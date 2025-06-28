@@ -72,7 +72,7 @@ func (s *MapStorage) GetLongURL(ctx context.Context, ID string) (string, error) 
 	defer s.m.RUnlock()
 
 	if val, exist := s.FullURLStorage[ID]; !exist {
-		return "", errs.ErrNotFound
+		return "", errs.ErrURLNotFound
 	} else {
 		return val, nil
 	}
@@ -86,7 +86,7 @@ func (s *MapStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLP
 
 	data, ok := s.UserLinkStorage[userID]
 	if !ok {
-		return nil, errs.ErrNotFound
+		return nil, errs.ErrURLNotFound
 	}
 
 	for k := range data {
@@ -105,7 +105,7 @@ func (s *MapStorage) GetUserURLs(ctx context.Context, userID string) ([]dto.URLP
 func (s *MapStorage) DeleteURLs(ctx context.Context, userID string, urls []string) error {
 	userURLs, ok := s.UserLinkStorage[userID]
 	if !ok {
-		return errs.ErrNotFound
+		return errs.ErrURLNotFound
 	}
 
 	s.m.Lock()

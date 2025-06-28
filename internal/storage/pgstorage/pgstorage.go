@@ -98,7 +98,7 @@ func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	}
 
 	if result == "" {
-		return "", errs.ErrNotFound
+		return "", errs.ErrURLNotFound
 	}
 
 	if deleted {

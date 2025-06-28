@@ -1,0 +1,233 @@
+definitions:
+  dto.BatchRequest:
+    properties:
+      correlation_id:
+        type: string
+      original_url:
+        type: string
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  dto.Request:
+    properties:
+      url:
+        type: string
+    type: object
+  dto.URLPair:
+    properties:
+      original_url:
+        type: string
+      short_url:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a url shortening server.
+  title: Shortener API
+  version: "1.0"
+paths:
+  /:
+    post:
+      consumes:
+      - text/plain
+      description: If cookie with access token is not provided, creates a new token
+        with new userID.
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        type: string
+      - description: URL to shorten
+        in: body
+        name: URL
+        required: true
+        schema:
+          type: string
+      produces:
+      - text/plain
+      responses:
+        "201":
+          description: Short url
+          headers:
+            Set-cookie:
+              description: Access token
+              type: string
+          schema:
+            type: body
+        "400":
+          description: Wrong URL schema
+          schema:
+            type: string
+        "409":
+          description: URL already exists
+          schema:
+            type: string
+        "422":
+          description: Not a URL
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Creates short url
+      tags:
+      - default
+  /:id:
+    get:
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        required: true
+        type: string
+      - description: Short URL ID
+        in: query
+        name: ID
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "307":
+          description: Temporary Redirect
+          headers:
+            Location:
+              description: Original URL
+              type: string
+        "400":
+          description: ID is not present
+          schema:
+            type: string
+        "404":
+          description: URL not Found
+          schema:
+            type: string
+        "410":
+          description: URL deleted
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Redirects to original URL
+      tags:
+      - default
+  /api/shorten:
+    post:
+      consumes:
+      - application/json
+      description: If cookie with access token is not provided, creates a new token
+        with new userID.
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        type: string
+      - description: URLs to shorten
+        in: body
+        name: URL
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/dto.BatchRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Short urls
+          headers:
+            Set-cookie:
+              description: Access token
+              type: string
+          schema:
+            type: body
+        "400":
+          description: Wrong URL schema
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: URL already exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "422":
+          description: Not a URL
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Creates a batch of short URLs
+      tags:
+      - json
+  /api/user/urls:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        required: true
+        type: string
+      - description: URLs to delete
+        in: body
+        name: URLs
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            type: string
+        "401":
+          description: URL doesn't belong to user
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Deletes user URLs
+      tags:
+      - json
+    get:
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Array of URLs
+          schema:
+            items:
+              $ref: '#/definitions/dto.URLPair'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Returns array of user URLs
+      tags:
+      - json
+securityDefinitions:
+  ApiKeyAuth:
+    in: cookie
+    name: Access-token
+    type: apiKey
+swagger: "2.0"

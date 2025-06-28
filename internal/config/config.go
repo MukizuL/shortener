@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"github.com/MukizuL/shortener/docs"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"log"
@@ -16,6 +17,7 @@ var ErrMalformedFlags = errors.New("error parsing flags")
 var ErrMalformedAddr = errors.New("address of wrong format")
 var ErrMalformedBase = errors.New("base should be an url")
 
+// Config holds all application configuration.
 type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`
 	Base     string `env:"BASE_URL"`
@@ -24,34 +26,26 @@ type Config struct {
 	Key      string `env:"PRIVATE_KEY"`
 }
 
-// NewConfig fetches parameters, firstly from env variables, secondly from flags
-func NewConfig() *Config {
+// newConfig fetches parameters, firstly from env variables, secondly from flags.
+func newConfig() *Config {
 	result := &Config{}
+
+	flag.StringVar(&result.Addr, "a", "0.0.0.0:8080", "Sets server address.")
+
+	flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/*")
+
+	absPath, _ := filepath.Abs("./storage.json")
+
+	flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
+
+	flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
+
+	flag.Parse()
 
 	err := env.Parse(result)
 	if err != nil {
 		log.Fatal("Error parsing env variables")
 	}
-
-	if result.Addr == "" {
-		flag.StringVar(&result.Addr, "a", "0.0.0.0:8080", "Sets server address.")
-	}
-
-	if result.Base == "" {
-		flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/*")
-	}
-
-	absPath, _ := filepath.Abs("./storage.json")
-
-	if result.Filepath == "" {
-		flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
-	}
-
-	if result.DSN == "" {
-		flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
-	}
-
-	flag.Parse()
 
 	err = checkParams(result)
 	if err != nil {
@@ -97,9 +91,16 @@ func checkParams(cfg *Config) error {
 	//	return fmt.Errorf("missing private key in PRIVATE_KEY env")
 	//}
 
+	setSwagger(cfg)
+
 	return nil
 }
 
+func setSwagger(cfg *Config) {
+	docs.SwaggerInfo.Host = cfg.Addr
+	docs.SwaggerInfo.BasePath = cfg.Base
+}
+
 func Provide() fx.Option {
-	return fx.Provide(NewConfig)
+	return fx.Provide(newConfig)
 }

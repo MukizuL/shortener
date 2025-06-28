@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
@@ -141,7 +142,7 @@ func TestApplication_GetFullURL(t *testing.T) {
 			mockSetup: func(m *mockstorage.MockRepo) {
 				m.EXPECT().
 					GetLongURL(gomock.Any(), "qxDvSg").
-					Return("", errs.ErrNotFound)
+					Return("", errs.ErrURLNotFound)
 			},
 			want: want{
 				statusCode: 404,
@@ -194,6 +195,199 @@ func TestApplication_GetFullURL(t *testing.T) {
 			require.NoError(t, err)
 			err = result.Body.Close()
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestApplication_GetURLs(t *testing.T) {
+	type want struct {
+		statusCode int
+		fullURL    []dto.URLPair
+	}
+
+	tests := []struct {
+		name      string
+		mockSetup func(m *mockstorage.MockRepo)
+		user      string
+		want      want
+	}{
+		{
+			name: "Correct UserID with links",
+			mockSetup: func(m *mockstorage.MockRepo) {
+				m.EXPECT().GetUserURLs(gomock.Any(), "user1").Return([]dto.URLPair{
+					{ShortURL: "https://link1.com", OriginalURL: "https://localhost:8080/1"},
+					{ShortURL: "https://link2.com", OriginalURL: "https://localhost:8080/2"},
+					{ShortURL: "https://link3.com", OriginalURL: "https://localhost:8080/3"},
+					{ShortURL: "https://link4.com", OriginalURL: "https://localhost:8080/4"},
+					{ShortURL: "https://link5.com", OriginalURL: "https://localhost:8080/5"},
+				}, nil)
+			},
+			user: "user1",
+			want: want{
+				statusCode: 200,
+				fullURL: []dto.URLPair{
+					{ShortURL: "https://link1.com", OriginalURL: "https://localhost:8080/1"},
+					{ShortURL: "https://link2.com", OriginalURL: "https://localhost:8080/2"},
+					{ShortURL: "https://link3.com", OriginalURL: "https://localhost:8080/3"},
+					{ShortURL: "https://link4.com", OriginalURL: "https://localhost:8080/4"},
+					{ShortURL: "https://link5.com", OriginalURL: "https://localhost:8080/5"},
+				},
+			},
+		},
+		{
+			name: "Correct UserID with no links",
+			mockSetup: func(m *mockstorage.MockRepo) {
+				m.EXPECT().GetUserURLs(gomock.Any(), "user1").Return([]dto.URLPair{}, nil)
+			},
+			user: "user1",
+			want: want{
+				statusCode: 200,
+				fullURL:    []dto.URLPair{},
+			},
+		},
+		{
+			name: "Error in storage",
+			mockSetup: func(m *mockstorage.MockRepo) {
+				m.EXPECT().GetUserURLs(gomock.Any(), "user1").Return([]dto.URLPair{}, errs.ErrInternalServerError)
+			},
+			user: "user1",
+			want: want{
+				statusCode: 500,
+				fullURL:    []dto.URLPair{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mockstorage.NewMockRepo(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockRepo)
+			}
+
+			app := &Controller{
+				storage: mockRepo,
+			}
+
+			r := httptest.NewRequest(http.MethodGet, "/api/user/urls", nil)
+
+			r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, tt.user))
+
+			w := httptest.NewRecorder()
+			app.GetURLs(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+
+			if tt.want.statusCode == 200 {
+				var urls []dto.URLPair
+				err := json.NewDecoder(result.Body).Decode(&urls)
+				assert.NoError(t, err)
+
+				err = result.Body.Close()
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.want.fullURL, urls)
+			}
+		})
+	}
+}
+
+func TestApplication_DeleteURLs(t *testing.T) {
+	type want struct {
+		statusCode int
+	}
+
+	tests := []struct {
+		name      string
+		mockSetup func(m *mockstorage.MockRepo)
+		user      string
+		links     []string
+		want      want
+	}{
+		{
+			name: "Correct UserID with links",
+			mockSetup: func(m *mockstorage.MockRepo) {
+				m.EXPECT().DeleteURLs(gomock.Any(), "user1", []string{
+					"https://link1.com",
+					"https://link2.com",
+					"https://link3.com",
+					"https://link4.com",
+					"https://link5.com",
+				}).Return(nil)
+			},
+			user: "user1",
+			links: []string{
+				"https://link1.com",
+				"https://link2.com",
+				"https://link3.com",
+				"https://link4.com",
+				"https://link5.com",
+			},
+			want: want{
+				statusCode: 202,
+			},
+		},
+		{
+			name: "Error in storage",
+			mockSetup: func(m *mockstorage.MockRepo) {
+				m.EXPECT().DeleteURLs(gomock.Any(), "user1", []string{
+					"https://link1.com",
+					"https://link2.com",
+					"https://link3.com",
+					"https://link4.com",
+					"https://link5.com",
+				}).Return(errs.ErrInternalServerError)
+			},
+			user: "user1",
+			links: []string{
+				"https://link1.com",
+				"https://link2.com",
+				"https://link3.com",
+				"https://link4.com",
+				"https://link5.com",
+			},
+			want: want{
+				statusCode: 500,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mockstorage.NewMockRepo(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockRepo)
+			}
+
+			app := &Controller{
+				storage: mockRepo,
+			}
+
+			buf := &bytes.Buffer{}
+			err := json.NewEncoder(buf).Encode(tt.links)
+			assert.NoError(t, err)
+
+			r := httptest.NewRequest(http.MethodDelete, "/api/user/urls", buf)
+
+			r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, tt.user))
+
+			w := httptest.NewRecorder()
+			app.DeleteURLs(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+
+			err = result.Body.Close()
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -324,6 +518,154 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want.response.(dto.ErrorResponse).Err, errResp.Err)
 			}
+		})
+	}
+}
+
+func TestApplication_BatchCreateShortURLJSON(t *testing.T) {
+	type want struct {
+		contentType string
+		statusCode  int
+		response    interface{}
+	}
+
+	tests := []struct {
+		name        string
+		body        []dto.BatchRequest
+		mockStorage func(m *mockstorage.MockRepo)
+		want        want
+	}{
+		{
+			name: "Correct working",
+			body: []dto.BatchRequest{
+				{
+					CorrelationID: "1",
+					OriginalURL:   "https://www.youtube1.com",
+				},
+				{
+					CorrelationID: "2",
+					OriginalURL:   "https://www.youtube2.com",
+				},
+				{
+					CorrelationID: "3",
+					OriginalURL:   "https://www.youtube3.com",
+				},
+			},
+			mockStorage: func(m *mockstorage.MockRepo) {
+				m.EXPECT().BatchCreateShortURL(gomock.Any(), "user1", "http://localhost:8080/", gomock.Any()).Return([]dto.BatchResponse{
+					{
+						CorrelationID: "1",
+						ShortURL:      "http://localhost:8080/qxDvSD",
+					},
+					{
+						CorrelationID: "2",
+						ShortURL:      "http://localhost:8080/qxDvSS",
+					},
+					{
+						CorrelationID: "3",
+						ShortURL:      "http://localhost:8080/qxDvSB",
+					},
+				}, nil)
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  201,
+				response: []dto.BatchResponse{
+					{
+						CorrelationID: "1",
+						ShortURL:      "http://localhost:8080/qxDvSD",
+					},
+					{
+						CorrelationID: "2",
+						ShortURL:      "http://localhost:8080/qxDvSS",
+					},
+					{
+						CorrelationID: "3",
+						ShortURL:      "http://localhost:8080/qxDvSB",
+					},
+				},
+			},
+		},
+		{
+			name: "Error in storage",
+			body: []dto.BatchRequest{
+				{
+					CorrelationID: "1",
+					OriginalURL:   "https://www.youtube1.com",
+				},
+				{
+					CorrelationID: "2",
+					OriginalURL:   "https://www.youtube2.com",
+				},
+				{
+					CorrelationID: "3",
+					OriginalURL:   "https://www.youtube3.com",
+				},
+			},
+			mockStorage: func(m *mockstorage.MockRepo) {
+				m.EXPECT().
+					BatchCreateShortURL(gomock.Any(), "user1", "http://localhost:8080/", gomock.Any()).
+					Return([]dto.BatchResponse{}, errs.ErrInternalServerError)
+			},
+			want: want{
+				contentType: "application/json",
+				statusCode:  500,
+				response: dto.ErrorResponse{
+					Err: "Internal Server Error",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockRepo := mockstorage.NewMockRepo(ctrl)
+			if tt.mockStorage != nil {
+				tt.mockStorage(mockRepo)
+			}
+
+			c := &Controller{
+				storage: mockRepo,
+			}
+
+			buf := &bytes.Buffer{}
+
+			err := json.NewEncoder(buf).Encode(tt.body)
+			require.NoError(t, err)
+
+			r := httptest.NewRequest(http.MethodPost, "/api/shorten/batch", buf)
+			r.Header.Set("Content-Type", "application/json")
+			r.Host = "localhost:8080"
+			r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, "user1"))
+
+			w := httptest.NewRecorder()
+			c.BatchCreateShortURLJSON(w, r)
+
+			result := w.Result()
+
+			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
+
+			fmt.Println(result.StatusCode)
+
+			switch tt.want.statusCode {
+			case http.StatusCreated:
+				var resp []dto.BatchResponse
+				err = json.NewDecoder(result.Body).Decode(&resp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.([]dto.BatchResponse), resp)
+			case http.StatusInternalServerError:
+				var errResp dto.ErrorResponse
+				err = json.NewDecoder(result.Body).Decode(&errResp)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.response.(dto.ErrorResponse).Err, errResp.Err)
+			}
+
+			err = result.Body.Close()
+			assert.NoError(t, err)
 		})
 	}
 }
