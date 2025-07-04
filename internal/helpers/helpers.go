@@ -36,7 +36,7 @@ func WriteCookie(w http.ResponseWriter, token string) {
 		Value:    token,
 		Path:     "/",
 		MaxAge:   876000,
-		Secure:   true,
+		Secure:   false,
 		HttpOnly: true,
 		SameSite: http.SameSiteDefaultMode,
 	}

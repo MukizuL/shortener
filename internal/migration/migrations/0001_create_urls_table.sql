@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS urls (
     id SERIAL PRIMARY KEY,
     user_id UUID,
@@ -8,3 +10,7 @@ CREATE TABLE IF NOT EXISTS urls (
 
 CREATE INDEX urls_short_url_hash_idx ON urls USING HASH(short_url);
 CREATE INDEX urls_user_id_hash_idx ON urls USING HASH(user_id);
+-- +goose StatementEnd
+    
+-- +goose Down
+DROP TABLE IF EXISTS urls;

@@ -159,6 +159,76 @@ const docTemplate = `{
                 "tags": [
                     "json"
                 ],
+                "summary": "Creates short URL",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cookie with access token",
+                        "name": "Cookie",
+                        "in": "header"
+                    },
+                    {
+                        "description": "URL to shorten",
+                        "name": "URL",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Short url",
+                        "schema": {
+                            "type": "body"
+                        },
+                        "headers": {
+                            "Set-cookie": {
+                                "type": "string",
+                                "description": "Access token"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Wrong URL schema",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "URL already exists",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not a URL",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/shorten/batch": {
+            "post": {
+                "description": "If cookie with access token is not provided, creates a new token with new userID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "json"
+                ],
                 "summary": "Creates a batch of short URLs",
                 "parameters": [
                     {
