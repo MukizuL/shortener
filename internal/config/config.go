@@ -3,14 +3,15 @@ package config
 import (
 	"errors"
 	"flag"
-	"github.com/MukizuL/shortener/docs"
-	"github.com/caarlos0/env/v11"
-	"go.uber.org/fx"
 	"log"
 	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/MukizuL/shortener/docs"
+	"github.com/caarlos0/env/v11"
+	"go.uber.org/fx"
 )
 
 var ErrMalformedFlags = errors.New("error parsing flags")
@@ -24,6 +25,7 @@ type Config struct {
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
 	Key      string `env:"PRIVATE_KEY"`
+	Debug    bool   `env:"DEBUG"`
 }
 
 // newConfig fetches parameters, firstly from env variables, secondly from flags.
@@ -39,6 +41,8 @@ func newConfig() *Config {
 	flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
 
 	flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
+
+	flag.BoolVar(&result.Debug, "debug", false, "Sets server debug mode.")
 
 	flag.Parse()
 

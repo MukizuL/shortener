@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	netUrl "net/url"
+	"time"
+
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	netUrl "net/url"
-	"time"
 )
 
 // CreateShortURL godoc
@@ -59,7 +60,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, fmt.Sprintf("http://%s/", r.Host), url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			http.Error(w, http.StatusText(http.StatusConflict), http.StatusConflict)
+			http.Error(w, shortURL, http.StatusConflict)
 			return
 		}
 
@@ -138,6 +139,10 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
+	}
+
+	if len(data) == 0 {
+		w.WriteHeader(http.StatusNoContent)
 	}
 
 	helpers.WriteJSON(w, http.StatusOK, data)
@@ -267,7 +272,8 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	}
 
 	for _, v := range req {
-		url, err := netUrl.ParseRequestURI(v.OriginalURL)
+		var url *netUrl.URL
+		url, err = netUrl.ParseRequestURI(v.OriginalURL)
 		if err != nil {
 			helpers.WriteJSON(w, http.StatusUnprocessableEntity, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnprocessableEntity)})
 			return

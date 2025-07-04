@@ -5,6 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
@@ -13,11 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"io"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 func TestApplication_CreateShortURL(t *testing.T) {
@@ -53,12 +54,12 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			mockStorage: func(m *mockstorage.MockRepo) {
 				m.EXPECT().
 					CreateShortURL(gomock.Any(), gomock.Any(), "http://localhost:8080/", "https://www.youtube.com").
-					Return("", errs.ErrDuplicate)
+					Return("http://localhost:8080/qxDvSD", errs.ErrDuplicate)
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
 				statusCode:  409,
-				shortURL:    "Conflict\n",
+				shortURL:    "http://localhost:8080/qxDvSD\n",
 			},
 		},
 		{
@@ -241,8 +242,8 @@ func TestApplication_GetURLs(t *testing.T) {
 			},
 			user: "user1",
 			want: want{
-				statusCode: 200,
-				fullURL:    []dto.URLPair{},
+				statusCode: 204,
+				fullURL:    nil,
 			},
 		},
 		{

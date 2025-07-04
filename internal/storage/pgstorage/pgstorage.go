@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lib/pq"
 	"go.uber.org/zap"
@@ -21,7 +23,7 @@ func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 
 	tx, err := s.conn.Begin(ctx)
 	if err != nil {
-		s.logger.Error("pgstorage:BatchCreateShortURL Transaction start", zap.Error(err))
+		s.logger.Error("pgstorage:BatchCreateShortURL Failed to start a transaction", zap.Error(err))
 		return nil, errs.ErrInternalServerError
 	}
 	defer tx.Rollback(ctx)
@@ -68,7 +70,26 @@ func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 
 func (s *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL string) (string, error) {
 	ID := helpers.RandomString(6)
-	err := s.conn.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
+	tx, err := s.conn.Begin(ctx)
+	if err != nil {
+		s.logger.Error("pgstorage:CreateShortURL Failed to start a transaction", zap.Error(err))
+		return "", errs.ErrInternalServerError
+	}
+	defer tx.Rollback(ctx)
+
+	var rows int
+	var rowUserID, rowShortURL string
+	err = tx.QueryRow(ctx, `SELECT COUNT(*), user_id, short_url FROM urls WHERE full_url = $1 GROUP BY user_id, short_url`, fullURL).Scan(&rows, &rowUserID, &rowShortURL)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		s.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
+		return "", errs.ErrInternalServerError
+	}
+
+	if rows > 0 && rowUserID != userID {
+		return urlBase + rowShortURL, errs.ErrDuplicate
+	}
+
+	err = tx.QueryRow(ctx, `INSERT INTO urls (user_id, short_url, full_url)
 										VALUES ($1, $2, $3)
 										ON CONFLICT(full_url)
 										DO UPDATE SET full_url = urls.full_url
@@ -85,6 +106,12 @@ func (s *PGStorage) CreateShortURL(ctx context.Context, userID, urlBase, fullURL
 		return "", errs.ErrInternalServerError
 	}
 
+	err = tx.Commit(ctx)
+	if err != nil {
+		s.logger.Error("pgstorage:CreateShortURL ", zap.Error(err))
+		return "", errs.ErrInternalServerError
+	}
+
 	return urlBase + ID, nil
 }
 
@@ -93,12 +120,12 @@ func (s *PGStorage) GetLongURL(ctx context.Context, ID string) (string, error) {
 	var deleted bool
 	err := s.conn.QueryRow(ctx, `SELECT full_url, deleted_flag FROM urls WHERE short_url = $1`, ID).Scan(&result, &deleted)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", errs.ErrURLNotFound
+		}
+
 		s.logger.Error("pgstorage:GetLongURL ", zap.Error(err))
 		return "", errs.ErrInternalServerError
-	}
-
-	if result == "" {
-		return "", errs.ErrURLNotFound
 	}
 
 	if deleted {

@@ -2,13 +2,14 @@ package router
 
 import (
 	"expvar"
+	"net/http"
+	"net/http/pprof"
+
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/controller"
 	mw "github.com/MukizuL/shortener/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/fx"
-	"net/http"
-	"net/http/pprof"
 )
 
 // NewRouter initializes new chi.Mux with routes.
