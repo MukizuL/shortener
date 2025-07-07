@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -16,22 +17,44 @@ import (
 
 func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.Logger, storage storage.Repo, migrator *migration.Migrator) *http.Server {
 	srv := &http.Server{
-		Addr:    cfg.Addr,
-		Handler: r,
+		Addr:         cfg.Addr,
+		Handler:      r,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
+			if !cfg.HTTPS {
+				logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
 
-			ln, err := net.Listen("tcp", srv.Addr)
-			if err != nil {
-				return err
+				ln, err := net.Listen("tcp", srv.Addr)
+				if err != nil {
+					return err
+				}
+
+				go srv.Serve(ln)
+
+				return nil
+			} else {
+				logger.Info("Starting HTTPS server", zap.String("addr", srv.Addr))
+
+				tlsConfig := &tls.Config{
+					CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256}, // They have assembly implementation
+				}
+
+				srv.TLSConfig = tlsConfig
+
+				ln, err := net.Listen("tcp", srv.Addr)
+				if err != nil {
+					return err
+				}
+
+				go srv.ServeTLS(ln, "./tls/cert.pem", "./tls/key.pem")
+
+				return nil
 			}
-
-			go srv.Serve(ln)
-
-			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			err := storage.OffloadStorage(ctx, cfg.Filepath)

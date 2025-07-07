@@ -35,6 +35,7 @@ services:
       FILE_STORAGE_PATH: ./storage.json
       DATABASE_DSN: postgres://postgres:example@db:5432/postgres
       PRIVATE_KEY: 1234567890
+      ENABLE_HTTPS: true
       DEBUG: true
     ports:
       - "8080:8080"

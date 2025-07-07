@@ -5,11 +5,13 @@ import (
 	"flag"
 	"log"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/MukizuL/shortener/docs"
+	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 )
@@ -25,6 +27,7 @@ type Config struct {
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
 	Key      string `env:"PRIVATE_KEY"`
+	HTTPS    bool   `env:"ENABLE_HTTPS"`
 	Debug    bool   `env:"DEBUG"`
 }
 
@@ -42,6 +45,8 @@ func newConfig() *Config {
 
 	flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
 
+	flag.BoolVar(&result.HTTPS, "s", false, "Turns on HTTPS. Requires cert.pem and key.pem in tls folder.")
+
 	flag.BoolVar(&result.Debug, "debug", false, "Sets server debug mode.")
 
 	flag.Parse()
@@ -49,6 +54,14 @@ func newConfig() *Config {
 	err := env.Parse(result)
 	if err != nil {
 		log.Fatal("Error parsing env variables")
+	}
+
+	if result.HTTPS {
+		err = checkFiles()
+		if err != nil {
+			flag.Usage()
+			log.Fatal(err)
+		}
 	}
 
 	err = checkParams(result)
@@ -96,6 +109,18 @@ func checkParams(cfg *Config) error {
 	//}
 
 	setSwagger(cfg)
+
+	return nil
+}
+
+func checkFiles() error {
+	if _, err := os.Stat("/tls/cert.pem"); errors.Is(err, os.ErrNotExist) {
+		return errs.ErrNoCert
+	}
+
+	if _, err := os.Stat("/tls/key.pem"); errors.Is(err, os.ErrNotExist) {
+		return errs.ErrNoPK
+	}
 
 	return nil
 }
