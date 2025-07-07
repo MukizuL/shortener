@@ -2,12 +2,13 @@ package jwt
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/MukizuL/shortener/internal/config"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
-	"time"
 )
 
 //go:generate mockgen -source=jwt.go -destination=mocks/jwt.go -package=mockjwt

@@ -1,9 +1,14 @@
 // Package shortener starts server for shortening URLs.
+
 package main
 
 import (
-	"github.com/MukizuL/shortener/internal/controller"
+	"fmt"
 	"net/http"
+
+	"github.com/MukizuL/shortener/internal/controller"
+	"github.com/MukizuL/shortener/internal/migration"
+	"go.uber.org/fx/fxevent"
 
 	"github.com/MukizuL/shortener/internal/config"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
@@ -25,8 +30,24 @@ import (
 //	@in							cookie
 //	@name						Access-token
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
-	fx.New(createApp(), fx.Invoke(func(*http.Server) {})).Run()
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
+	fx.New(
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
+		createApp(),
+		fx.Invoke(func(*http.Server) {}),
+	).Run()
 }
 
 func createApp() fx.Option {
@@ -42,5 +63,6 @@ func createApp() fx.Option {
 		pgstorage.Provide(),
 		mapstorage.Provide(),
 		storage.Provide(),
+		migration.Provide(),
 	)
 }

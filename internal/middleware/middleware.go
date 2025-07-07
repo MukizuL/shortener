@@ -4,21 +4,18 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strings"
-	"time"
 )
-
-type userIDKey string
-
-var key userIDKey = "userID"
 
 type MiddlewareService struct {
 	jwtService jwtService.JWTServiceInterface
@@ -99,6 +96,11 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 
 		var token, userID string
 		if errors.Is(err, http.ErrNoCookie) {
+			if r.RequestURI == "/api/user/urls" {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
 			token, userID, err = s.jwtService.CreateToken()
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -124,8 +126,8 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 
 		r = r.Clone(context.WithValue(r.Context(), contextI.UserIDContextKey, userID))
 
-		h.ServeHTTP(w, r)
-
 		helpers.WriteCookie(w, token)
+
+		h.ServeHTTP(w, r)
 	})
 }

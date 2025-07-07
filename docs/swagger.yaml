@@ -128,6 +128,53 @@ paths:
         in: header
         name: Cookie
         type: string
+      - description: URL to shorten
+        in: body
+        name: URL
+        required: true
+        schema:
+          $ref: '#/definitions/dto.Request'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Short url
+          headers:
+            Set-cookie:
+              description: Access token
+              type: string
+          schema:
+            type: body
+        "400":
+          description: Wrong URL schema
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: URL already exists
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "422":
+          description: Not a URL
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Creates short URL
+      tags:
+      - json
+  /api/shorten/batch:
+    post:
+      consumes:
+      - application/json
+      description: If cookie with access token is not provided, creates a new token
+        with new userID.
+      parameters:
+      - description: Cookie with access token
+        in: header
+        name: Cookie
+        type: string
       - description: URLs to shorten
         in: body
         name: URL

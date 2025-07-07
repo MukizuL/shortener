@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:17.2-alpine
+    restart: always
+    ports:
+      - "8081:5432"
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - shortener:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres" ]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SERVER_ADDRESS: 0.0.0.0:8080
+      BASE_URL:
+      FILE_STORAGE_PATH: ./storage.json
+      DATABASE_DSN: postgres://postgres:example@db:5432/postgres
+      PRIVATE_KEY: 1234567890
+      DEBUG: true
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  shortener:
