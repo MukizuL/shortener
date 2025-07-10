@@ -23,14 +23,14 @@ var ErrMalformedBase = errors.New("base should be an url")
 
 // Config holds all application configuration.
 type Config struct {
-	Addr     string `env:"SERVER_ADDRESS"`
-	Base     string `env:"BASE_URL"`
-	Config   string `env:"CONFIG"`
-	Filepath string `env:"FILE_STORAGE_PATH"`
-	DSN      string `env:"DATABASE_DSN"`
-	Key      string `env:"PRIVATE_KEY"`
-	HTTPS    bool   `env:"ENABLE_HTTPS"`
-	Debug    bool   `env:"DEBUG"`
+	Addr     string `env:"SERVER_ADDRESS" json:"server_address"`
+	Base     string `env:"BASE_URL" json:"base_url"`
+	Config   string `env:"CONFIG" json:"config"`
+	Filepath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+	DSN      string `env:"DATABASE_DSN" json:"database_dsn"`
+	Key      string `env:"PRIVATE_KEY" json:"private_key"`
+	HTTPS    bool   `env:"ENABLE_HTTPS" json:"enable_https"`
+	Debug    bool   `env:"DEBUG" json:"debug"`
 }
 
 // newConfig fetches parameters, firstly from env variables, secondly from flags.
