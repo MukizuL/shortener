@@ -98,11 +98,6 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 
 		var token, userID string
 		if errors.Is(err, http.ErrNoCookie) {
-			if r.RequestURI == "/api/user/urls" {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return
-			}
-
 			token, userID, err = s.jwtService.CreateToken()
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

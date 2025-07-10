@@ -1,9 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
-	"log"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ var ErrMalformedBase = errors.New("base should be an url")
 type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`
 	Base     string `env:"BASE_URL"`
+	Config   string `env:"CONFIG"`
 	Filepath string `env:"FILE_STORAGE_PATH"`
 	DSN      string `env:"DATABASE_DSN"`
 	Key      string `env:"PRIVATE_KEY"`
@@ -32,45 +34,48 @@ type Config struct {
 }
 
 // newConfig fetches parameters, firstly from env variables, secondly from flags.
-func newConfig() *Config {
-	result := &Config{}
+func newConfig() (*Config, error) {
+	resultCfg := &Config{}
 
-	flag.StringVar(&result.Addr, "a", "0.0.0.0:8080", "Sets server address.")
-
-	flag.StringVar(&result.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/*")
-
-	absPath, _ := filepath.Abs("./storage.json")
-
-	flag.StringVar(&result.Filepath, "r", absPath, "Sets server storage file path.")
-
-	flag.StringVar(&result.DSN, "d", "", "Sets server DSN.")
-
-	flag.BoolVar(&result.HTTPS, "s", false, "Turns on HTTPS. Requires cert.pem and key.pem in tls folder.")
-
-	flag.BoolVar(&result.Debug, "debug", false, "Sets server debug mode.")
-
-	flag.Parse()
-
-	err := env.Parse(result)
+	envCfg, err := envConfig()
 	if err != nil {
-		log.Fatal("Error parsing env variables")
+		flag.Usage()
+		return nil, fmt.Errorf("error loading config from env: %w", err)
 	}
 
-	if result.HTTPS {
+	flagCfg, err := flagConfig()
+	if err != nil {
+		flag.Usage()
+		return nil, fmt.Errorf("error loading config from flag: %w", err)
+	}
+
+	if envCfg.Config != "" || flagCfg.Config != "" {
+		fileCfg, err := fileConfig("")
+		if err != nil {
+			return nil, fmt.Errorf("error loading config from file: %w", err)
+		}
+		mergeConfig(resultCfg, fileCfg)
+	}
+
+	mergeConfig(resultCfg, flagCfg)
+
+	mergeConfig(resultCfg, envCfg)
+
+	if resultCfg.HTTPS {
 		err = checkFiles()
 		if err != nil {
 			flag.Usage()
-			log.Fatal(err)
+			return nil, err
 		}
 	}
 
-	err = checkParams(result)
+	err = checkParams(resultCfg)
 	if err != nil {
 		flag.Usage()
-		log.Fatal(err)
+		return nil, err
 	}
 
-	return result
+	return resultCfg, nil
 }
 
 func checkParams(cfg *Config) error {
@@ -114,11 +119,11 @@ func checkParams(cfg *Config) error {
 }
 
 func checkFiles() error {
-	if _, err := os.Stat("/tls/cert.pem"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat("./tls/cert.pem"); errors.Is(err, os.ErrNotExist) {
 		return errs.ErrNoCert
 	}
 
-	if _, err := os.Stat("/tls/key.pem"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat("./tls/key.pem"); errors.Is(err, os.ErrNotExist) {
 		return errs.ErrNoPK
 	}
 
@@ -128,6 +133,88 @@ func checkFiles() error {
 func setSwagger(cfg *Config) {
 	docs.SwaggerInfo.Host = cfg.Addr
 	docs.SwaggerInfo.BasePath = cfg.Base
+}
+
+func envConfig() (*Config, error) {
+	cfg := &Config{}
+
+	err := env.Parse(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+func flagConfig() (*Config, error) {
+	cfg := &Config{}
+
+	flag.StringVar(&cfg.Addr, "a", "0.0.0.0:8080", "Sets server address.")
+
+	flag.StringVar(&cfg.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/your/base")
+
+	absPath, _ := filepath.Abs("./storage.json")
+
+	flag.StringVar(&cfg.Filepath, "r", absPath, "Sets server storage file absolute path.")
+
+	flag.StringVar(&cfg.Config, "c", "", "Sets server config file name.")
+
+	flag.StringVar(&cfg.DSN, "d", "", "Sets server DSN.")
+
+	flag.BoolVar(&cfg.HTTPS, "s", false, "Turns on HTTPS. Requires cert.pem and key.pem in tls folder.")
+
+	flag.BoolVar(&cfg.Debug, "debug", false, "Sets server debug mode.")
+
+	flag.Parse()
+
+	return cfg, nil
+}
+
+func fileConfig(name string) (*Config, error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	err = json.NewDecoder(file).Decode(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+func mergeConfig(dst, src *Config) {
+	if src == nil {
+		return
+	}
+
+	if src.Addr != "" {
+		dst.Addr = src.Addr
+	}
+	if src.Base != "" {
+		dst.Base = src.Base
+	}
+	if src.Config != "" {
+		dst.Config = src.Config
+	}
+	if src.Filepath != "" {
+		dst.Filepath = src.Filepath
+	}
+	if src.DSN != "" {
+		dst.DSN = src.DSN
+	}
+	if src.Key != "" {
+		dst.Key = src.Key
+	}
+	// Booleans: only overwrite if true to preserve priority
+	if src.HTTPS {
+		dst.HTTPS = true
+	}
+	if src.Debug {
+		dst.Debug = true
+	}
 }
 
 func Provide() fx.Option {

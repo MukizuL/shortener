@@ -133,7 +133,13 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
-	userID := r.Context().Value(contextI.UserIDContextKey).(string)
+	var (
+		userID string
+		ok     bool
+	)
+	if userID, ok = r.Context().Value(contextI.UserIDContextKey).(string); !ok {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	}
 
 	data, err := c.storage.GetUserURLs(ctx, userID)
 	if err != nil {
