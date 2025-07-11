@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	netUrl "net/url"
@@ -57,12 +56,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
-	var urlBase string
-	if r.TLS != nil {
-		urlBase = fmt.Sprintf("https://%s/", r.Host)
-	} else {
-		urlBase = fmt.Sprintf("http://%s/", r.Host)
-	}
+	urlBase := helpers.BuildURLSBase(r.TLS, r.Host)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url.String())
 	if err != nil {
@@ -241,12 +235,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
-	var urlBase string
-	if r.TLS != nil {
-		urlBase = fmt.Sprintf("https://%s/", r.Host)
-	} else {
-		urlBase = fmt.Sprintf("http://%s/", r.Host)
-	}
+	urlBase := helpers.BuildURLSBase(r.TLS, r.Host)
 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url.String())
 	if err != nil {
@@ -307,12 +296,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
-	var urlBase string
-	if r.TLS != nil {
-		urlBase = fmt.Sprintf("https://%s/", r.Host)
-	} else {
-		urlBase = fmt.Sprintf("http://%s/", r.Host)
-	}
+	urlBase := helpers.BuildURLSBase(r.TLS, r.Host)
 
 	response, err := c.storage.BatchCreateShortURL(ctx, userID, urlBase, req)
 	if err != nil {

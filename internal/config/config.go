@@ -23,17 +23,19 @@ var ErrMalformedBase = errors.New("base should be an url")
 
 // Config holds all application configuration.
 type Config struct {
-	Addr     string `env:"SERVER_ADDRESS" json:"server_address"`
-	Base     string `env:"BASE_URL" json:"base_url"`
-	Config   string `env:"CONFIG" json:"config"`
-	Filepath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
-	DSN      string `env:"DATABASE_DSN" json:"database_dsn"`
-	Key      string `env:"PRIVATE_KEY" json:"private_key"`
-	HTTPS    bool   `env:"ENABLE_HTTPS" json:"enable_https"`
-	Debug    bool   `env:"DEBUG" json:"debug"`
+	Addr           string `env:"SERVER_ADDRESS" json:"server_address"`
+	Base           string `env:"BASE_URL" json:"base_url"`
+	Config         string `env:"CONFIG" json:"config"`
+	Filepath       string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+	DSN            string `env:"DATABASE_DSN" json:"database_dsn"`
+	MasterPassword string `env:"MASTER_PASSWORD" json:"master_password"`
+	HTTPS          bool   `env:"ENABLE_HTTPS" json:"enable_https"`
+	Cert           string `env:"CERT_PATH" json:"cert_path"`
+	PK             string `env:"PK_PATH" json:"pk_path"`
+	Debug          bool   `env:"DEBUG" json:"debug"`
 }
 
-// newConfig fetches parameters, firstly from env variables, secondly from flags.
+// newConfig fetches parameters, firstly from env variables, secondly from flags, then from file.
 func newConfig() (*Config, error) {
 	resultCfg := &Config{}
 
@@ -61,14 +63,7 @@ func newConfig() (*Config, error) {
 
 	mergeConfig(resultCfg, envCfg)
 
-	if resultCfg.HTTPS {
-		err = checkFiles()
-		if err != nil {
-			flag.Usage()
-			return nil, err
-		}
-	}
-
+	fmt.Printf("%+v\n", resultCfg)
 	err = checkParams(resultCfg)
 	if err != nil {
 		flag.Usage()
@@ -109,8 +104,23 @@ func checkParams(cfg *Config) error {
 		cfg.Filepath = temp
 	}
 
-	//if cfg.Key == "" {
-	//	return fmt.Errorf("missing private key in PRIVATE_KEY env")
+	if cfg.HTTPS {
+		if cfg.Cert == "" {
+			return errs.ErrNoCert
+		}
+
+		if cfg.PK == "" {
+			return errs.ErrNoPK
+		}
+
+		err := checkFiles(cfg.Cert, cfg.PK)
+		if err != nil {
+			return err
+		}
+	}
+
+	//if cfg.MasterPassword == "" {
+	//	return fmt.Errorf("missing private key")
 	//}
 
 	setSwagger(cfg)
@@ -118,12 +128,12 @@ func checkParams(cfg *Config) error {
 	return nil
 }
 
-func checkFiles() error {
-	if _, err := os.Stat("./tls/cert.pem"); errors.Is(err, os.ErrNotExist) {
+func checkFiles(cert, pk string) error {
+	if _, err := os.Stat(cert); errors.Is(err, os.ErrNotExist) {
 		return errs.ErrNoCert
 	}
 
-	if _, err := os.Stat("./tls/key.pem"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(pk); errors.Is(err, os.ErrNotExist) {
 		return errs.ErrNoPK
 	}
 
@@ -153,15 +163,17 @@ func flagConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/your/base")
 
-	absPath, _ := filepath.Abs("./storage.json")
-
-	flag.StringVar(&cfg.Filepath, "r", absPath, "Sets server storage file absolute path.")
+	flag.StringVar(&cfg.Filepath, "r", "./storage.json", "Sets server storage file path.")
 
 	flag.StringVar(&cfg.Config, "c", "", "Sets server config file name.")
 
 	flag.StringVar(&cfg.DSN, "d", "", "Sets server DSN.")
 
-	flag.BoolVar(&cfg.HTTPS, "s", false, "Turns on HTTPS. Requires cert.pem and key.pem in tls folder.")
+	flag.BoolVar(&cfg.HTTPS, "s", false, "Turns on HTTPS. Requires cert and pk to be set.")
+
+	flag.StringVar(&cfg.Cert, "cert", "", "Sets certificate file path.")
+
+	flag.StringVar(&cfg.PK, "pk", "", "Sets private key file path.")
 
 	flag.BoolVar(&cfg.Debug, "debug", false, "Sets server debug mode.")
 
@@ -175,6 +187,7 @@ func fileConfig(name string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 
 	var cfg Config
 	err = json.NewDecoder(file).Decode(&cfg)
@@ -205,8 +218,14 @@ func mergeConfig(dst, src *Config) {
 	if src.DSN != "" {
 		dst.DSN = src.DSN
 	}
-	if src.Key != "" {
-		dst.Key = src.Key
+	if src.MasterPassword != "" {
+		dst.MasterPassword = src.MasterPassword
+	}
+	if src.Cert != "" {
+		dst.Cert = src.Cert
+	}
+	if src.PK != "" {
+		dst.PK = src.PK
 	}
 	// Booleans: only overwrite if true to preserve priority
 	if src.HTTPS {

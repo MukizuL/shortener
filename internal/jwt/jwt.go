@@ -25,7 +25,7 @@ type JWTService struct {
 
 func newJWTService(cfg *config.Config) JWTServiceInterface {
 	return &JWTService{
-		key: []byte(cfg.Key),
+		key: []byte(cfg.MasterPassword),
 	}
 }
 

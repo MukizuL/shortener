@@ -26,13 +26,13 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
+			ln, err := net.Listen("tcp", srv.Addr)
+			if err != nil {
+				return err
+			}
+
 			if !cfg.HTTPS {
 				logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
-
-				ln, err := net.Listen("tcp", srv.Addr)
-				if err != nil {
-					return err
-				}
 
 				go srv.Serve(ln)
 
@@ -42,16 +42,20 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.
 
 				tlsConfig := &tls.Config{
 					CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256}, // They have assembly implementation
+					MinVersion:       tls.VersionTLS12,
+					CipherSuites: []uint16{
+						tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+						tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+						tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+						tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+						tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+						tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+					},
 				}
 
 				srv.TLSConfig = tlsConfig
 
-				ln, err := net.Listen("tcp", srv.Addr)
-				if err != nil {
-					return err
-				}
-
-				go srv.ServeTLS(ln, "./tls/cert.pem", "./tls/key.pem")
+				go srv.ServeTLS(ln, cfg.Cert, cfg.PK)
 
 				return nil
 			}

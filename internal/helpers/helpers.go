@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -70,4 +71,12 @@ func BuildValuePlaceholders(numCols, numRows int) string {
 	}
 
 	return strings.Join(placeholders, ", ")
+}
+
+func BuildURLSBase(tls *tls.ConnectionState, host string) string {
+	if tls != nil {
+		return fmt.Sprintf("https://%s/", host)
+	} else {
+		return fmt.Sprintf("http://%s/", host)
+	}
 }
