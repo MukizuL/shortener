@@ -1,18 +1,10 @@
 package dto
 
+type Envelope map[string]interface{}
+
 // Request represents a URL shortening request.
 type Request struct {
 	FullURL string `json:"url"`
-}
-
-// Response represents a successful URL shortening response.
-type Response struct {
-	Result string `json:"result"`
-}
-
-// ErrorResponse represents an error response.
-type ErrorResponse struct {
-	Err string `json:"error"`
 }
 
 // BatchRequest represents a batch URL shortening request item.

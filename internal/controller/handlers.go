@@ -177,18 +177,18 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&urls)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
 	err = c.storage.DeleteURLs(ctx, userID, urls)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserMismatch) {
-			helpers.WriteJSON(w, http.StatusUnauthorized, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnauthorized)})
+			helpers.WriteJSON(w, http.StatusUnauthorized, dto.Envelope{"error": http.StatusText(http.StatusUnauthorized)})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
@@ -218,18 +218,18 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	var req dto.Request
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
 	url, err := netUrl.ParseRequestURI(req.FullURL)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusUnprocessableEntity, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnprocessableEntity)})
+		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
 		return
 	}
 
 	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-		helpers.WriteJSON(w, http.StatusBadRequest, &dto.ErrorResponse{Err: http.StatusText(http.StatusBadRequest)})
+		helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
 		return
 	}
 
@@ -240,15 +240,15 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, &dto.Response{Result: shortURL})
+			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"short_url": shortURL})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
-	out := &dto.Response{Result: shortURL}
+	out := dto.Envelope{"short_url": shortURL}
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
@@ -276,7 +276,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	var req []dto.BatchRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
@@ -284,12 +284,12 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 		var url *netUrl.URL
 		url, err = netUrl.ParseRequestURI(v.OriginalURL)
 		if err != nil {
-			helpers.WriteJSON(w, http.StatusUnprocessableEntity, &dto.ErrorResponse{Err: http.StatusText(http.StatusUnprocessableEntity)})
+			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
 			return
 		}
 
 		if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-			helpers.WriteJSON(w, http.StatusBadRequest, &dto.ErrorResponse{Err: http.StatusText(http.StatusBadRequest)})
+			helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
 			return
 		}
 	}
@@ -301,11 +301,11 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	response, err := c.storage.BatchCreateShortURL(ctx, userID, urlBase, req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, &dto.ErrorResponse{Err: http.StatusText(http.StatusConflict)})
+			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"error": http.StatusText(http.StatusConflict)})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
@@ -319,11 +319,11 @@ func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
 	err := c.storage.Ping(ctx)
 	if err != nil {
 		c.logger.Error("Error in Ping handler", zap.Error(err))
-		helpers.WriteJSON(w, http.StatusInternalServerError, &dto.ErrorResponse{Err: http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
-	out := &dto.Response{Result: "Pong"}
+	out := dto.Envelope{"message": "Pong"}
 
 	helpers.WriteJSON(w, http.StatusOK, out)
 }
