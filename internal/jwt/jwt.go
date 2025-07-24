@@ -25,7 +25,7 @@ type JWTService struct {
 
 func newJWTService(cfg *config.Config) JWTServiceInterface {
 	return &JWTService{
-		key: []byte(cfg.Key),
+		key: []byte(cfg.MasterPassword),
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *JWTService) ValidateToken(token string) (string, string, error) {
 
 	newToken, err := s.RefreshToken(claims.Subject)
 	if err != nil {
-		return "", "", errs.ErrInternalServerError
+		return "", "", err
 	}
 
 	return newToken, claims.Subject, nil
@@ -71,7 +71,7 @@ func (s *JWTService) CreateToken() (string, string, error) {
 
 	accessTokenSigned, err := accessToken.SignedString(s.key)
 	if err != nil {
-		return "", "", err
+		return "", "", errs.ErrSigningToken
 	}
 
 	return accessTokenSigned, userID, nil
@@ -87,7 +87,7 @@ func (s *JWTService) RefreshToken(userID string) (string, error) {
 
 	accessTokenSigned, err := accessToken.SignedString(s.key)
 	if err != nil {
-		return "", err
+		return "", errs.ErrRefreshingToken
 	}
 
 	return accessTokenSigned, nil

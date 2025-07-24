@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/MukizuL/shortener/internal/dto"
 	"github.com/MukizuL/shortener/internal/errs"
@@ -28,12 +29,10 @@ func (s *PGStorage) BatchCreateShortURL(ctx context.Context, userID, urlBase str
 	}
 	defer tx.Rollback(ctx)
 
-	batches := helpers.SplitIntoBatches(data, batchSize)
-
-	for _, batch := range batches {
-		numRows := len(batch)
+	for chunk := range slices.Chunk(data, batchSize) {
+		numRows := len(chunk)
 		args := make([]interface{}, 0, numRows*numCols)
-		for _, item := range batch {
+		for _, item := range chunk {
 			ID := helpers.RandomString(6)
 			args = append(args, userID, ID, item.OriginalURL)
 

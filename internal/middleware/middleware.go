@@ -86,6 +86,8 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 
 // Authorization checks for Access-token in cookie. If it's present and valid, sets userID in context.
 // If token is not present, creates a new one. If token is invalid, returns an error.
+//
+// BUG: Throws 500 when
 func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("Access-token")
@@ -96,11 +98,6 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 
 		var token, userID string
 		if errors.Is(err, http.ErrNoCookie) {
-			if r.RequestURI == "/api/user/urls" {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return
-			}
-
 			token, userID, err = s.jwtService.CreateToken()
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

@@ -32,9 +32,13 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0:8080
       BASE_URL:
+      CONFIG:
       FILE_STORAGE_PATH: ./storage.json
       DATABASE_DSN: postgres://postgres:example@db:5432/postgres
-      PRIVATE_KEY: 1234567890
+      MASTER_PASSWORD: 1234567890
+      ENABLE_HTTPS: true
+      CERT_PATH: ./tls/cert.pem
+      PK_PATH: ./tls/key.pem
       DEBUG: true
     ports:
       - "8080:8080"

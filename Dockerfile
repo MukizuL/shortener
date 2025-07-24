@@ -11,7 +11,7 @@ RUN \
   BUILD_DATE=$(date +'%Y/%m/%d %H:%M:%S') && \
   echo "COMMIT=$BUILD_COMMIT" >> build.env && \
   echo "DATE=\"$BUILD_DATE\"" >> build.env && \
-  echo "VERSION=v1.0.1" >> build.env
+  echo "VERSION=v0.7.0" >> build.env
 
 # ========== Phase 2: build Go binary ==========
 FROM golang:1.24 AS build-stage
@@ -34,13 +34,13 @@ WORKDIR /app/cmd/shortener
 SHELL ["/bin/bash", "-c"]
 RUN source /app/cmd/shortener/../../build.env && \
     CGO_ENABLED=0 GOOS=linux \
-    go build -ldflags "-X main.buildVersion=$VERSION -X 'main.buildDate=$DATE' -X main.buildCommit=$COMMIT" -o /api
+    go build -ldflags "-X main.buildVersion=$VERSION -X 'main.buildDate=$DATE' -X main.buildCommit=$COMMIT" -o /app/api
 
 # ========== Phase 3: minimal runtime image ==========
 FROM scratch AS run-stage
 
 WORKDIR /app
-COPY --from=metadata-stage /meta/build.env .
-COPY --from=build-stage /api /api
+COPY --from=build-stage /app/api /app/api
+COPY ./tls ./tls
 
-CMD ["/api"]
+CMD ["/app/api"]
