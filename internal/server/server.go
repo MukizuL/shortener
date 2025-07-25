@@ -66,7 +66,6 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.
 				return err
 			}
 
-			time.Sleep(2 * time.Second)
 			return srv.Shutdown(ctx)
 		},
 	})

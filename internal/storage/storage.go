@@ -18,6 +18,7 @@ type Repo interface {
 	GetLongURL(ctx context.Context, ID string) (string, error)
 	GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error)
 	DeleteURLs(ctx context.Context, userID string, urls []string) error
+	GetStats(ctx context.Context) (int, int, error)
 	OffloadStorage(ctx context.Context, filepath string) error
 	Ping(ctx context.Context) error
 }

@@ -32,6 +32,7 @@ services:
     environment:
       SERVER_ADDRESS: 0.0.0.0:8080
       BASE_URL:
+      TRUSTED_SUBNET: 172.16.0.0/12
       CONFIG:
       FILE_STORAGE_PATH: ./storage.json
       DATABASE_DSN: postgres://postgres:example@db:5432/postgres

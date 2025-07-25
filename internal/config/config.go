@@ -25,6 +25,7 @@ var ErrMalformedBase = errors.New("base should be an url")
 type Config struct {
 	Addr           string `env:"SERVER_ADDRESS" json:"server_address"`
 	Base           string `env:"BASE_URL" json:"base_url"`
+	TrustedCIDR    string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 	Config         string `env:"CONFIG" json:"config"`
 	Filepath       string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
 	DSN            string `env:"DATABASE_DSN" json:"database_dsn"`
@@ -163,6 +164,8 @@ func flagConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.Base, "b", "", "Sets server URL base. Example: http(s)://address:port/your/base")
 
+	flag.StringVar(&cfg.TrustedCIDR, "t", "", "Sets server URL trusted CIDR")
+
 	flag.StringVar(&cfg.Filepath, "r", "./storage.json", "Sets server storage file path.")
 
 	flag.StringVar(&cfg.Config, "c", "", "Sets server config file name.")
@@ -208,6 +211,9 @@ func mergeConfig(dst, src *Config) {
 	}
 	if src.Base != "" {
 		dst.Base = src.Base
+	}
+	if src.TrustedCIDR != "" {
+		dst.TrustedCIDR = src.TrustedCIDR
 	}
 	if src.Config != "" {
 		dst.Config = src.Config

@@ -11,7 +11,7 @@ RUN \
   BUILD_DATE=$(date +'%Y/%m/%d %H:%M:%S') && \
   echo "COMMIT=$BUILD_COMMIT" >> build.env && \
   echo "DATE=\"$BUILD_DATE\"" >> build.env && \
-  echo "VERSION=v0.7.0" >> build.env
+  echo "VERSION=v0.8.0" >> build.env
 
 # ========== Phase 2: build Go binary ==========
 FROM golang:1.24 AS build-stage
