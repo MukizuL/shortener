@@ -6,10 +6,8 @@ definitions:
       original_url:
         type: string
     type: object
-  dto.ErrorResponse:
-    properties:
-      error:
-        type: string
+  dto.Envelope:
+    additionalProperties: true
     type: object
   dto.Request:
     properties:
@@ -117,6 +115,23 @@ paths:
       summary: Redirects to original URL
       tags:
       - default
+  /api/internal/stats:
+    get:
+      description: Access only allowed from trusted_subnet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stats
+          schema:
+            type: body
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Envelope'
+      summary: Provides service stats
+      tags:
+      - json
   /api/shorten:
     post:
       consumes:
@@ -148,19 +163,19 @@ paths:
         "400":
           description: Wrong URL schema
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "409":
           description: URL already exists
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "422":
           description: Not a URL
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
       summary: Creates short URL
       tags:
       - json
@@ -197,19 +212,19 @@ paths:
         "400":
           description: Wrong URL schema
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "409":
           description: URL already exists
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "422":
           description: Not a URL
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dto.ErrorResponse'
+            $ref: '#/definitions/dto.Envelope'
       summary: Creates a batch of short URLs
       tags:
       - json

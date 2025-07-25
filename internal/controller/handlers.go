@@ -206,10 +206,10 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 //	@Param			URL		body		dto.Request			true	"URL to shorten"
 //	@Success		201		body		dto.Response		"Short url"
 //	@Header			201		{string}	Set-cookie			"Access token"
-//	@Failure		400		{object}	dto.ErrorResponse	"Wrong URL schema"
-//	@Failure		409		{object}	dto.ErrorResponse	"URL already exists"
-//	@Failure		422		{object}	dto.ErrorResponse	"Not a URL"
-//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Failure		400		{object}	dto.Envelope	"Wrong URL schema"
+//	@Failure		409		{object}	dto.Envelope	"URL already exists"
+//	@Failure		422		{object}	dto.Envelope	"Not a URL"
+//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/shorten [post]
 func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -264,10 +264,10 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 //	@Param			URL		body		[]dto.BatchRequest	true	"URLs to shorten"
 //	@Success		201		body		[]dto.BatchResponse	"Short urls"
 //	@Header			201		{string}	Set-cookie			"Access token"
-//	@Failure		400		{object}	dto.ErrorResponse	"Wrong URL schema"
-//	@Failure		409		{object}	dto.ErrorResponse	"URL already exists"
-//	@Failure		422		{object}	dto.ErrorResponse	"Not a URL"
-//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Failure		400		{object}	dto.Envelope	"Wrong URL schema"
+//	@Failure		409		{object}	dto.Envelope	"URL already exists"
+//	@Failure		422		{object}	dto.Envelope	"Not a URL"
+//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/shorten/batch [post]
 func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -335,7 +335,7 @@ func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
 //	@Tags			json
 //	@Produce		application/json
 //	@Success		200		body		dto.Stats	"Stats"
-//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/internal/stats [get]
 func (c *Controller) GetStats(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
