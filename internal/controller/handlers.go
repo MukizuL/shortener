@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	netUrl "net/url"
 	"time"
 
 	contextI "github.com/MukizuL/shortener/internal/context"
@@ -42,20 +43,16 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if string(rawURL) == "" {
+	url, err := netUrl.ParseRequestURI(string(rawURL))
+	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
-	//url, err := netUrl.ParseRequestURI(string(rawURL))
-	//if err != nil {
-	//	http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
-	//	return
-	//}
-	//
-	//if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-	//	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-	//	return
-	//}
+
+	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
@@ -225,21 +222,16 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if req.FullURL == "" {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+	url, err := netUrl.ParseRequestURI(req.FullURL)
+	if err != nil {
+		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
 		return
 	}
 
-	//url, err := netUrl.ParseRequestURI(req.FullURL)
-	//if err != nil {
-	//	helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
-	//	return
-	//}
-	//
-	//if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-	//	helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
-	//	return
-	//}
+	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+		helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
+		return
+	}
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
@@ -289,25 +281,18 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	}
 
 	for _, v := range req {
-		if v.OriginalURL == "" {
+		var url *netUrl.URL
+		url, err = netUrl.ParseRequestURI(v.OriginalURL)
+		if err != nil {
 			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
 			return
 		}
-	}
 
-	//for _, v := range req {
-	//	var url *netUrl.URL
-	//	url, err = netUrl.ParseRequestURI(v.OriginalURL)
-	//	if err != nil {
-	//		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
-	//		return
-	//	}
-	//
-	//	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-	//		helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
-	//		return
-	//	}
-	//}
+		if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+			helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
+			return
+		}
+	}
 
 	userID := r.Context().Value(contextI.UserIDContextKey).(string)
 
