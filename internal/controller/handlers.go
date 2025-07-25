@@ -240,7 +240,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url.String())
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"short_url": shortURL})
+			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"result": shortURL})
 			return
 		}
 

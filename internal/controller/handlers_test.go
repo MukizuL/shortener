@@ -417,7 +417,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  201,
-				response:    dto.Envelope{"short_url": "http://localhost:8080/qxDvSD"},
+				response:    dto.Envelope{"result": "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
@@ -431,7 +431,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  409,
-				response:    dto.Envelope{"short_url": "http://localhost:8080/qxDvSD"},
+				response:    dto.Envelope{"result": "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
@@ -512,7 +512,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 				var resp dto.Envelope
 				err = json.Unmarshal(body, &resp)
 				require.NoError(t, err)
-				assert.Equal(t, tt.want.response.(dto.Envelope)["short_url"], resp["short_url"])
+				assert.Equal(t, tt.want.response.(dto.Envelope)["result"], resp["result"])
 			default:
 				var errResp dto.Envelope
 				err = json.Unmarshal(body, &errResp)
