@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/MukizuL/shortener/internal/config"
 	contextI "github.com/MukizuL/shortener/internal/context"
 	"github.com/MukizuL/shortener/internal/errs"
 	"github.com/MukizuL/shortener/internal/helpers"
@@ -19,12 +21,14 @@ import (
 
 type MiddlewareService struct {
 	jwtService jwtService.JWTServiceInterface
+	cfg        *config.Config
 	logger     *zap.Logger
 }
 
-func NewMiddlewareService(jwtService jwtService.JWTServiceInterface, logger *zap.Logger) *MiddlewareService {
+func NewMiddlewareService(jwtService jwtService.JWTServiceInterface, cfg *config.Config, logger *zap.Logger) *MiddlewareService {
 	return &MiddlewareService{
 		jwtService: jwtService,
+		cfg:        cfg,
 		logger:     logger,
 	}
 }
@@ -86,8 +90,6 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 
 // Authorization checks for Access-token in cookie. If it's present and valid, sets userID in context.
 // If token is not present, creates a new one. If token is invalid, returns an error.
-//
-// BUG: Throws 500 when
 func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("Access-token")
@@ -126,5 +128,36 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 		helpers.WriteCookie(w, token)
 
 		h.ServeHTTP(w, r)
+	})
+}
+
+func (s *MiddlewareService) IsTrustedCIDR(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.cfg.TrustedCIDR == "" {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			return
+		}
+
+		realIP := r.Header.Get("X-Real-IP")
+		if realIP == "" {
+			ipPort := strings.Split(r.RemoteAddr, ":")
+			realIP = ipPort[0]
+		}
+
+		IP := net.ParseIP(realIP)
+
+		_, subnet, err := net.ParseCIDR(s.cfg.TrustedCIDR)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		if subnet.Contains(IP) {
+			h.ServeHTTP(w, r)
+		} else {
+			s.logger.Warn("IP is not trusted", zap.String("ip", IP.String()))
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			return
+		}
 	})
 }

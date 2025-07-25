@@ -24,3 +24,9 @@ type URLPair struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
+
+// Stats provides info on how many shortURLs and users in the system.
+type Stats struct {
+	Urls  int `json:"urls"`
+	Users int `json:"users"`
+}

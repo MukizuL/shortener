@@ -26,6 +26,7 @@ func NewRouter(cfg *config.Config, mw *mw.MiddlewareService, c *controller.Contr
 	r.With(mw.Authorization).Delete(cfg.Base+"/api/user/urls", c.DeleteURLs)
 	r.With(mw.Authorization).Post(cfg.Base+"/api/shorten", c.CreateShortURLJSON)
 	r.With(mw.Authorization).Post(cfg.Base+"/api/shorten/batch", c.BatchCreateShortURLJSON)
+	r.With(mw.IsTrustedCIDR).Get(cfg.Base+"/api/internal/stats", c.GetStats)
 
 	r.Mount("/debug", Profiler())
 

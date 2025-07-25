@@ -327,3 +327,28 @@ func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
 
 	helpers.WriteJSON(w, http.StatusOK, out)
 }
+
+// GetStats godoc
+//
+//	@Summary		Provides service stats
+//	@Description	Access only allowed from trusted_subnet.
+//	@Tags			json
+//	@Produce		application/json
+//	@Success		200		body		dto.Stats	"Stats"
+//	@Failure		500		{object}	dto.ErrorResponse	"Internal Server Error"
+//	@Router			/api/internal/stats [get]
+func (c *Controller) GetStats(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+
+	urls, users, err := c.storage.GetStats(ctx)
+	if err != nil {
+		c.logger.Error("Error in GetStats handler", zap.Error(err))
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	out := dto.Stats{Urls: urls, Users: users}
+
+	helpers.WriteJSON(w, http.StatusOK, &out)
+}
