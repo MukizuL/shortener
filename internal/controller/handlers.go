@@ -248,7 +248,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	out := dto.Envelope{"short_url": shortURL}
+	out := dto.Envelope{"result": shortURL}
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
