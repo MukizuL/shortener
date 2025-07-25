@@ -67,13 +67,26 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		gzW, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
 			io.WriteString(w, err.Error())
 			return
 		}
 
-		defer gz.Close()
+		defer gzW.Close()
+
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+			gzR, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer gzR.Close()
+
+			r.Body = gzR
+
+			r.Body.Close()
+		}
 
 		w.Header().Set("Content-Encoding", "gzip")
 
@@ -83,7 +96,7 @@ func (s *MiddlewareService) GzipCompress(h http.Handler) http.Handler {
 				status:         0,
 				size:           0,
 			},
-			Writer: gz,
+			Writer: gzW,
 		}, r)
 	})
 }
