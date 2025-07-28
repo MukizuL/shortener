@@ -219,7 +219,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 
 	url, err := helpers.CheckURL([]byte(req.FullURL))
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
+		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": fmt.Sprintf("URL %s is unprocessable", req.FullURL)})
 		return
 	}
 
@@ -273,7 +273,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	for _, v := range req {
 		_, err = helpers.CheckURL([]byte(v.OriginalURL))
 		if err != nil {
-			http.Error(w, fmt.Sprintf("URL %s is unprocessable", v.OriginalURL), http.StatusUnprocessableEntity)
+			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": fmt.Sprintf("URL %s is unprocessable", v.OriginalURL)})
 			return
 		}
 	}

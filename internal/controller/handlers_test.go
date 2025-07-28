@@ -70,8 +70,8 @@ func TestApplication_CreateShortURL(t *testing.T) {
 			},
 			want: want{
 				contentType: "text/plain; charset=utf-8",
-				statusCode:  400,
-				shortURL:    "Bad Request\n",
+				statusCode:  422,
+				shortURL:    "Unprocessable Entity\n",
 			},
 		},
 	}
@@ -442,8 +442,8 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			},
 			want: want{
 				contentType: "application/json",
-				statusCode:  400,
-				response:    dto.Envelope{"error": "Bad Request"},
+				statusCode:  422,
+				response:    dto.Envelope{"error": "URL https:// is unprocessable"},
 			},
 		},
 		{
@@ -455,7 +455,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
-				response:    dto.Envelope{"error": "Unprocessable Entity"},
+				response:    dto.Envelope{"error": "URL www.something.ru is unprocessable"},
 			},
 		},
 		{
@@ -467,7 +467,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
-				response:    dto.Envelope{"error": "Unprocessable Entity"},
+				response:    dto.Envelope{"error": "URL  is unprocessable"},
 			},
 		},
 	}
