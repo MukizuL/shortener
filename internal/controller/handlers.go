@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
-	netUrl "net/url"
 	"time"
 
 	contextI "github.com/MukizuL/shortener/internal/context"
@@ -43,14 +43,9 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := netUrl.ParseRequestURI(string(rawURL))
+	url, err := helpers.CheckURL(rawURL)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
-		return
-	}
-
-	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
@@ -58,7 +53,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 
 	urlBase := helpers.BuildURLSBase(r.TLS, r.Host)
 
-	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, string(rawURL))
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			http.Error(w, shortURL, http.StatusConflict)
@@ -222,14 +217,9 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	url, err := netUrl.ParseRequestURI(req.FullURL)
+	url, err := helpers.CheckURL([]byte(req.FullURL))
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
-		return
-	}
-
-	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-		helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
+		http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -237,7 +227,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 
 	urlBase := helpers.BuildURLSBase(r.TLS, r.Host)
 
-	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, req.FullURL)
+	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
 			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"result": shortURL})
@@ -281,15 +271,9 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	}
 
 	for _, v := range req {
-		var url *netUrl.URL
-		url, err = netUrl.ParseRequestURI(v.OriginalURL)
+		_, err = helpers.CheckURL([]byte(v.OriginalURL))
 		if err != nil {
-			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": http.StatusText(http.StatusUnprocessableEntity)})
-			return
-		}
-
-		if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
-			helpers.WriteJSON(w, http.StatusBadRequest, dto.Envelope{"error": http.StatusText(http.StatusBadRequest)})
+			http.Error(w, fmt.Sprintf("URL %s is unprocessable", v.OriginalURL), http.StatusUnprocessableEntity)
 			return
 		}
 	}

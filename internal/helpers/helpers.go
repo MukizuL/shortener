@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	netUrl "net/url"
 	"strings"
 	"time"
 )
@@ -79,4 +80,17 @@ func BuildURLSBase(tls *tls.ConnectionState, host string) string {
 	} else {
 		return fmt.Sprintf("http://%s/", host)
 	}
+}
+
+func CheckURL(rawURL []byte) (string, error) {
+	url, err := netUrl.ParseRequestURI(string(rawURL))
+	if err != nil {
+		return "", fmt.Errorf("error parsing raw URL: %w", err)
+	}
+
+	if url.Scheme != "http" && url.Scheme != "https" || url.Host == "" {
+		return "", fmt.Errorf("error parsing raw URL: %v", rawURL)
+	}
+
+	return url.String(), nil
 }
