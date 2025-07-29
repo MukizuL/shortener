@@ -153,6 +153,7 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 // DeleteURLs godoc
 //
 //	@Summary	Deletes user URLs
+//	@Description Accepts array of short URLs
 //	@Tags		json
 //	@Accept		application/json
 //	@Produce	application/json
