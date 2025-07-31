@@ -100,6 +100,22 @@ func (mr *MockRepoMockRecorder) GetLongURL(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLongURL", reflect.TypeOf((*MockRepo)(nil).GetLongURL), ctx, ID)
 }
 
+// GetStats mocks base method.
+func (m *MockRepo) GetStats(ctx context.Context) (int, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStats", ctx)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetStats indicates an expected call of GetStats.
+func (mr *MockRepoMockRecorder) GetStats(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockRepo)(nil).GetStats), ctx)
+}
+
 // GetUserURLs mocks base method.
 func (m *MockRepo) GetUserURLs(ctx context.Context, userID string) ([]dto.URLPair, error) {
 	m.ctrl.T.Helper()

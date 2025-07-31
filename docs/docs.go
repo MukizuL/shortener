@@ -147,6 +147,32 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/internal/stats": {
+            "get": {
+                "description": "Access only allowed from trusted_subnet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "json"
+                ],
+                "summary": "Provides service stats",
+                "responses": {
+                    "200": {
+                        "description": "Stats",
+                        "schema": {
+                            "type": "body"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Envelope"
+                        }
+                    }
+                }
+            }
+        },
         "/api/shorten": {
             "post": {
                 "description": "If cookie with access token is not provided, creates a new token with new userID.",
@@ -193,25 +219,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Wrong URL schema",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "409": {
                         "description": "URL already exists",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "422": {
                         "description": "Not a URL",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     }
                 }
@@ -266,25 +292,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Wrong URL schema",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "409": {
                         "description": "URL already exists",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "422": {
                         "description": "Not a URL",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
+                            "$ref": "#/definitions/dto.Envelope"
                         }
                     }
                 }
@@ -393,13 +419,9 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ErrorResponse": {
+        "dto.Envelope": {
             "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                }
-            }
+            "additionalProperties": true
         },
         "dto.Request": {
             "type": "object",
