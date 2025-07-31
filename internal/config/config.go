@@ -197,7 +197,7 @@ func flagConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.PK, "pk", "", "Sets private key file path.")
 
-	flag.StringVar(&cfg.Addr, "grpc-port", "", "Sets GRPC server port (e.g.: :8081). If unset, GRPC server is off.")
+	flag.StringVar(&cfg.GRPCPort, "grpc-port", "", "Sets GRPC server port (e.g.: :8081). If unset, GRPC server is off.")
 
 	flag.BoolVar(&cfg.Debug, "debug", false, "Sets server debug mode.")
 
