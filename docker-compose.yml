@@ -40,9 +40,11 @@ services:
       ENABLE_HTTPS: true
       CERT_PATH: ./tls/cert.pem
       PK_PATH: ./tls/key.pem
+      GRPC_PORT: :8008
       DEBUG: true
     ports:
       - "8080:8080"
+      - "8008:8008"
     depends_on:
       db:
         condition: service_healthy

@@ -30,10 +30,14 @@ type Config struct {
 	Filepath       string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
 	DSN            string `env:"DATABASE_DSN" json:"database_dsn"`
 	MasterPassword string `env:"MASTER_PASSWORD" json:"master_password"`
-	HTTPS          bool   `env:"ENABLE_HTTPS" json:"enable_https"`
-	Cert           string `env:"CERT_PATH" json:"cert_path"`
-	PK             string `env:"PK_PATH" json:"pk_path"`
-	Debug          bool   `env:"DEBUG" json:"debug"`
+
+	HTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`
+	Cert  string `env:"CERT_PATH" json:"cert_path"`
+	PK    string `env:"PK_PATH" json:"pk_path"`
+
+	GRPCPort string `env:"GRPC_PORT" json:"grpc_port"`
+
+	Debug bool `env:"DEBUG" json:"debug"`
 }
 
 // newConfig fetches parameters, firstly from env variables, secondly from flags, then from file.
@@ -64,7 +68,6 @@ func newConfig() (*Config, error) {
 
 	mergeConfig(resultCfg, envCfg)
 
-	fmt.Printf("%+v\n", resultCfg)
 	err = checkParams(resultCfg)
 	if err != nil {
 		flag.Usage()
@@ -77,13 +80,13 @@ func newConfig() (*Config, error) {
 func checkParams(cfg *Config) error {
 	if cfg.Addr != "" {
 		addr := strings.Split(cfg.Addr, ":")
-		if len(addr) != 2 {
+		if len(addr) > 2 || len(addr) == 0 {
 			return ErrMalformedAddr
 		}
 
-		_, err := strconv.Atoi(addr[1])
-		if err != nil {
-			return ErrMalformedAddr
+		port, err := strconv.Atoi(addr[1])
+		if err != nil || port < 0 || port > 65535 {
+			return fmt.Errorf("http and grpc ports must be between 0 and 65535")
 		}
 	}
 
@@ -117,6 +120,20 @@ func checkParams(cfg *Config) error {
 		err := checkFiles(cfg.Cert, cfg.PK)
 		if err != nil {
 			return err
+		}
+	}
+
+	if cfg.GRPCPort != "" {
+		addr := strings.Split(cfg.Addr, ":")
+		grpcPort := strings.TrimPrefix(cfg.GRPCPort, ":")
+
+		if addr[1] == grpcPort {
+			return errors.New("http and grpc ports cannot be the same")
+		}
+
+		port, err := strconv.Atoi(grpcPort)
+		if err != nil || port < 0 || port > 65535 {
+			return fmt.Errorf("http and grpc ports must be between 0 and 65535")
 		}
 	}
 
@@ -178,6 +195,8 @@ func flagConfig() (*Config, error) {
 
 	flag.StringVar(&cfg.PK, "pk", "", "Sets private key file path.")
 
+	flag.StringVar(&cfg.Addr, "grpc-port", "", "Sets GRPC server port (e.g.: :8081). If unset, GRPC server is off.")
+
 	flag.BoolVar(&cfg.Debug, "debug", false, "Sets server debug mode.")
 
 	flag.Parse()
@@ -232,6 +251,9 @@ func mergeConfig(dst, src *Config) {
 	}
 	if src.PK != "" {
 		dst.PK = src.PK
+	}
+	if src.GRPCPort != "" {
+		dst.GRPCPort = src.GRPCPort
 	}
 	// Booleans: only overwrite if true to preserve priority
 	if src.HTTPS {

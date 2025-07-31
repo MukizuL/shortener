@@ -15,30 +15,41 @@ import (
 	"go.uber.org/zap"
 )
 
-func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.Logger, storage storage.Repo, migrator *migration.Migrator) *http.Server {
+type HTTPFxIn struct {
+	fx.In
+
+	Lc       fx.Lifecycle
+	Cfg      *config.Config
+	R        *chi.Mux
+	Logger   *zap.Logger
+	Storage  storage.Repo
+	Migrator *migration.Migrator
+}
+
+func newHTTPServer(in HTTPFxIn) *http.Server {
 	srv := &http.Server{
-		Addr:         cfg.Addr,
-		Handler:      r,
+		Addr:         in.Cfg.Addr,
+		Handler:      in.R,
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	lc.Append(fx.Hook{
+	in.Lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			ln, err := net.Listen("tcp", srv.Addr)
 			if err != nil {
 				return err
 			}
 
-			if !cfg.HTTPS {
-				logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
+			if !in.Cfg.HTTPS {
+				in.Logger.Info("Starting HTTP server", zap.String("addr", srv.Addr))
 
 				go srv.Serve(ln)
 
 				return nil
 			} else {
-				logger.Info("Starting HTTPS server", zap.String("addr", srv.Addr))
+				in.Logger.Info("Starting HTTPS server", zap.String("addr", srv.Addr))
 
 				tlsConfig := &tls.Config{
 					CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256}, // They have assembly implementation
@@ -55,13 +66,13 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.
 
 				srv.TLSConfig = tlsConfig
 
-				go srv.ServeTLS(ln, cfg.Cert, cfg.PK)
+				go srv.ServeTLS(ln, in.Cfg.Cert, in.Cfg.PK)
 
 				return nil
 			}
 		},
 		OnStop: func(ctx context.Context) error {
-			err := storage.OffloadStorage(ctx, cfg.Filepath)
+			err := in.Storage.OffloadStorage(ctx, in.Cfg.Filepath)
 			if err != nil {
 				return err
 			}
@@ -74,5 +85,5 @@ func newHTTPServer(lc fx.Lifecycle, cfg *config.Config, r *chi.Mux, logger *zap.
 }
 
 func Provide() fx.Option {
-	return fx.Provide(newHTTPServer)
+	return fx.Provide(newHTTPServer, newGRPCServer)
 }

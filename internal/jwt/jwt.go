@@ -44,7 +44,7 @@ func (s *JWTService) ValidateToken(token string) (string, string, error) {
 		return s.key, nil
 	})
 	if err != nil {
-		return "", "", err
+		return "", "", errs.ErrNotAuthorized
 	}
 
 	if !accessToken.Valid {

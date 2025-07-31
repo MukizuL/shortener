@@ -24,6 +24,7 @@ COPY go.sum .
 RUN go mod download
 
 COPY ./cmd ./cmd
+COPY ./proto ./proto
 COPY ./internal ./internal
 COPY internal/migration/migrations ./migrations
 COPY ./docs ./docs

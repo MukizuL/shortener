@@ -33,7 +33,7 @@ import (
 //	@Failure		422		{string}	string		"Not a URL"
 //	@Failure		500		{string}	string		"Internal Server Error"
 //	@Router			/ [post]
-func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
+func (c Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -87,7 +87,7 @@ func (c *Controller) CreateShortURL(w http.ResponseWriter, r *http.Request) {
 //	@Failure	410	{string}	string		"URL deleted"
 //	@Failure	500	{string}	string		"Internal Server Error"
 //	@Router		/:id [get]
-func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
+func (c Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -125,7 +125,7 @@ func (c *Controller) GetFullURL(w http.ResponseWriter, r *http.Request) {
 //	@Success	200		{object}	[]dto.URLPair	"Array of URLs"
 //	@Failure	500		{string}	string			"Internal Server Error"
 //	@Router		/api/user/urls [get]
-func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
+func (c Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -163,7 +163,7 @@ func (c *Controller) GetURLs(w http.ResponseWriter, r *http.Request) {
 //	@Failure	401		{string}	string		"URL doesn't belong to user"
 //	@Failure	500		{string}	string		"Internal Server Error"
 //	@Router		/api/user/urls [delete]
-func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
+func (c Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -207,7 +207,7 @@ func (c *Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 //	@Failure		422		{object}	dto.Envelope	"Not a URL"
 //	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/shorten [post]
-func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -260,7 +260,7 @@ func (c *Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) 
 //	@Failure		422		{object}	dto.Envelope	"Not a URL"
 //	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/shorten/batch [post]
-func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -297,7 +297,7 @@ func (c *Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Requ
 	helpers.WriteJSON(w, http.StatusCreated, response)
 }
 
-func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
+func (c Controller) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 
@@ -322,7 +322,7 @@ func (c *Controller) Ping(w http.ResponseWriter, r *http.Request) {
 //	@Success		200		body		dto.Stats	"Stats"
 //	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
 //	@Router			/api/internal/stats [get]
-func (c *Controller) GetStats(w http.ResponseWriter, r *http.Request) {
+func (c Controller) GetStats(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 

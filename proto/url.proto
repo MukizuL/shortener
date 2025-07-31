@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package shortener;
+
+option go_package = "github.com/MukizuL/shortener/proto";
+
+// Simple create short URL
+message CreateShortURLRequest {
+  string original_url = 1;
+}
+
+message CreateShortURLResponse {
+  string short_url = 1;
+  string access_token = 2;
+}
+
+// Batch create short URL
+message BatchRequest {
+  string correlation_id = 1;
+  string original_url = 2;
+}
+
+message BatchResponse {
+  string correlation_id = 1;
+  string short_url = 2;
+}
+
+message CreateBatchShortURLRequest {
+  repeated BatchRequest batch = 1;
+}
+
+message CreateBatchShortURLResponse {
+  repeated BatchResponse batch = 1;
+  string access_token = 2;
+}
+
+// Get original URL
+message GetOriginalURLRequest {
+  string short_url = 1;
+}
+
+message GetOriginalURLResponse {
+  string original_url = 1;
+}
+
+// Get user urls
+message URLPair {
+  string original_url = 1;
+  string short_url = 2;
+}
+
+message GetUserURLRequest {
+
+}
+
+message GetUserURLResponse {
+  repeated URLPair pairs = 1;
+  string access_token = 2;
+}
+
+// Delete short URL
+message DeleteShortURLRequest {
+  repeated string short_urls = 1;
+}
+
+message DeleteShortURLResponse {
+  string access_token = 1;
+}
+
+// Get stats
+message GetStatsRequest {
+
+}
+
+message GetStatsResponse {
+  int32 urls = 1;
+  int32 users = 2;
+}
+
+service Shortener {
+  rpc CreateGRPC(CreateShortURLRequest) returns (CreateShortURLResponse);
+  rpc CreateBatchGRPC(CreateBatchShortURLRequest) returns (CreateBatchShortURLResponse);
+  rpc GetOriginalURLGRPC(GetOriginalURLRequest) returns (GetOriginalURLResponse);
+  rpc GetUserURLsGRPC(GetUserURLRequest) returns (GetUserURLResponse);
+  rpc DeleteGRPC(DeleteShortURLRequest) returns (DeleteShortURLResponse);
+  rpc GetStatsGRPC(GetStatsRequest) returns (GetStatsResponse);
+}

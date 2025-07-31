@@ -25,7 +25,7 @@ type MiddlewareService struct {
 	logger     *zap.Logger
 }
 
-func NewMiddlewareService(jwtService jwtService.JWTServiceInterface, cfg *config.Config, logger *zap.Logger) *MiddlewareService {
+func newMiddlewareService(jwtService jwtService.JWTServiceInterface, cfg *config.Config, logger *zap.Logger) *MiddlewareService {
 	return &MiddlewareService{
 		jwtService: jwtService,
 		cfg:        cfg,
@@ -34,7 +34,7 @@ func NewMiddlewareService(jwtService jwtService.JWTServiceInterface, cfg *config
 }
 
 func Provide() fx.Option {
-	return fx.Provide(NewMiddlewareService)
+	return fx.Provide(newMiddlewareService)
 }
 
 // LoggerMW logs request and response.
