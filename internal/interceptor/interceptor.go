@@ -85,7 +85,7 @@ func (s Service) Auth(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
 		token, userID, err = s.jwtService.ValidateToken(tokens[0])
 		if err != nil {
 			if errors.Is(err, errs.ErrNotAuthorized) || errors.Is(err, errs.ErrUnexpectedSigningMethod) {
-				return nil, status.Errorf(codes.Unauthenticated, err.Error())
+				return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
 			}
 
 			return nil, status.Errorf(codes.Internal, "token validation failed")
@@ -138,6 +138,21 @@ func (s Service) IsTrustedCIDR(ctx context.Context, req any, info *grpc.UnarySer
 		s.logger.Warn("IP is not trusted", zap.String("ip", ip.String()))
 		return nil, status.Errorf(codes.PermissionDenied, "ip is not in trusted subnet")
 	}
+
+	return handler(ctx, req)
+}
+
+func (s Service) Recovery(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.Error("panic recovered",
+				zap.Any("panic", r),
+				zap.String("method", info.FullMethod),
+				zap.Stack("stack"),
+			)
+			err = status.Error(codes.Internal, "internal server error")
+		}
+	}()
 
 	return handler(ctx, req)
 }
