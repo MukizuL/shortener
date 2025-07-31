@@ -88,6 +88,8 @@ func checkParams(cfg *Config) error {
 		if err != nil || port < 0 || port > 65535 {
 			return fmt.Errorf("http and grpc ports must be between 0 and 65535")
 		}
+	} else {
+		return fmt.Errorf("address cannot be empty")
 	}
 
 	if cfg.Base != "" {
