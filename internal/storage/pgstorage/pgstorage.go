@@ -183,6 +183,40 @@ func (s *PGStorage) DeleteURLs(ctx context.Context, userID string, urls []string
 	return nil
 }
 
+// GetStats Returns number of urls and users.
+func (s *PGStorage) GetStats(ctx context.Context) (int, int, error) {
+	queryUrls := "SELECT COUNT(*) FROM urls"
+	queryUsers := "SELECT COUNT(*) OVER() FROM urls GROUP BY user_id"
+
+	var (
+		urls  int
+		users int
+	)
+
+	err := s.conn.QueryRow(ctx, queryUrls).Scan(&urls)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+		default:
+			s.logger.Error("pgstorage:GetStats ", zap.Error(err))
+			return 0, 0, errs.ErrInternalServerError
+		}
+
+	}
+
+	err = s.conn.QueryRow(ctx, queryUsers).Scan(&users)
+	if err != nil {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+		default:
+			s.logger.Error("pgstorage:GetStats ", zap.Error(err))
+			return 0, 0, errs.ErrInternalServerError
+		}
+	}
+
+	return urls, users, nil
+}
+
 func (s *PGStorage) OffloadStorage(ctx context.Context, filepath string) error {
 	return nil
 }

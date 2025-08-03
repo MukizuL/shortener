@@ -127,6 +127,13 @@ func (s *MapStorage) DeleteURLs(ctx context.Context, userID string, urls []strin
 	return nil
 }
 
+func (s *MapStorage) GetStats(ctx context.Context) (int, int, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return len(s.ShortURLStorage), len(s.UserLinkStorage), nil
+}
+
 func (s *MapStorage) LoadStorage(filepath string) error {
 	s.m.Lock()
 	defer s.m.Unlock()
