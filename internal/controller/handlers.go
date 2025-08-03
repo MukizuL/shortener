@@ -173,18 +173,18 @@ func (c Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&urls)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
 	err = c.storage.DeleteURLs(ctx, userID, urls)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserMismatch) {
-			helpers.WriteJSON(w, http.StatusUnauthorized, dto.Envelope{"error": http.StatusText(http.StatusUnauthorized)})
+			helpers.WriteJSON(w, http.StatusUnauthorized, dto.ResponseWrapper{"error": http.StatusText(http.StatusUnauthorized)})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
@@ -202,10 +202,10 @@ func (c Controller) DeleteURLs(w http.ResponseWriter, r *http.Request) {
 //	@Param			URL		body		dto.Request			true	"URL to shorten"
 //	@Success		201		body		dto.Response		"Short url"
 //	@Header			201		{string}	Set-cookie			"Access token"
-//	@Failure		400		{object}	dto.Envelope	"Wrong URL schema"
-//	@Failure		409		{object}	dto.Envelope	"URL already exists"
-//	@Failure		422		{object}	dto.Envelope	"Not a URL"
-//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
+//	@Failure		400		{object}	dto.ResponseWrapper	"Wrong URL schema"
+//	@Failure		409		{object}	dto.ResponseWrapper	"URL already exists"
+//	@Failure		422		{object}	dto.ResponseWrapper	"Not a URL"
+//	@Failure		500		{object}	dto.ResponseWrapper	"Internal Server Error"
 //	@Router			/api/shorten [post]
 func (c Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -214,13 +214,13 @@ func (c Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	var req dto.Request
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
 	url, err := helpers.CheckURL([]byte(req.FullURL))
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": fmt.Sprintf("URL %s is unprocessable", req.FullURL)})
+		helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.ResponseWrapper{"error": fmt.Sprintf("URL %s is unprocessable", req.FullURL)})
 		return
 	}
 
@@ -231,15 +231,15 @@ func (c Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	shortURL, err := c.storage.CreateShortURL(ctx, userID, urlBase, url)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"result": shortURL})
+			helpers.WriteJSON(w, http.StatusConflict, dto.ResponseWrapper{"result": shortURL})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
-	out := dto.Envelope{"result": shortURL}
+	out := dto.ResponseWrapper{"result": shortURL}
 
 	helpers.WriteJSON(w, http.StatusCreated, out)
 }
@@ -255,10 +255,10 @@ func (c Controller) CreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 //	@Param			URL		body		[]dto.BatchRequest	true	"URLs to shorten"
 //	@Success		201		body		[]dto.BatchResponse	"Short urls"
 //	@Header			201		{string}	Set-cookie			"Access token"
-//	@Failure		400		{object}	dto.Envelope	"Wrong URL schema"
-//	@Failure		409		{object}	dto.Envelope	"URL already exists"
-//	@Failure		422		{object}	dto.Envelope	"Not a URL"
-//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
+//	@Failure		400		{object}	dto.ResponseWrapper	"Wrong URL schema"
+//	@Failure		409		{object}	dto.ResponseWrapper	"URL already exists"
+//	@Failure		422		{object}	dto.ResponseWrapper	"Not a URL"
+//	@Failure		500		{object}	dto.ResponseWrapper	"Internal Server Error"
 //	@Router			/api/shorten/batch [post]
 func (c Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -267,14 +267,14 @@ func (c Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Reque
 	var req []dto.BatchRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
 	for _, v := range req {
 		_, err = helpers.CheckURL([]byte(v.OriginalURL))
 		if err != nil {
-			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.Envelope{"error": fmt.Sprintf("URL %s is unprocessable", v.OriginalURL)})
+			helpers.WriteJSON(w, http.StatusUnprocessableEntity, dto.ResponseWrapper{"error": fmt.Sprintf("URL %s is unprocessable", v.OriginalURL)})
 			return
 		}
 	}
@@ -286,11 +286,11 @@ func (c Controller) BatchCreateShortURLJSON(w http.ResponseWriter, r *http.Reque
 	response, err := c.storage.BatchCreateShortURL(ctx, userID, urlBase, req)
 	if err != nil {
 		if errors.Is(err, errs.ErrDuplicate) {
-			helpers.WriteJSON(w, http.StatusConflict, dto.Envelope{"error": http.StatusText(http.StatusConflict)})
+			helpers.WriteJSON(w, http.StatusConflict, dto.ResponseWrapper{"error": http.StatusText(http.StatusConflict)})
 			return
 		}
 
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
@@ -304,11 +304,11 @@ func (c Controller) Ping(w http.ResponseWriter, r *http.Request) {
 	err := c.storage.Ping(ctx)
 	if err != nil {
 		c.logger.Error("Error in Ping handler", zap.Error(err))
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
-	out := dto.Envelope{"message": "Pong"}
+	out := dto.ResponseWrapper{"message": "Pong"}
 
 	helpers.WriteJSON(w, http.StatusOK, out)
 }
@@ -320,7 +320,7 @@ func (c Controller) Ping(w http.ResponseWriter, r *http.Request) {
 //	@Tags			json
 //	@Produce		application/json
 //	@Success		200		body		dto.Stats	"Stats"
-//	@Failure		500		{object}	dto.Envelope	"Internal Server Error"
+//	@Failure		500		{object}	dto.ResponseWrapper	"Internal Server Error"
 //	@Router			/api/internal/stats [get]
 func (c Controller) GetStats(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
@@ -329,7 +329,7 @@ func (c Controller) GetStats(w http.ResponseWriter, r *http.Request) {
 	urls, users, err := c.storage.GetStats(ctx)
 	if err != nil {
 		c.logger.Error("Error in GetStats handler", zap.Error(err))
-		helpers.WriteJSON(w, http.StatusInternalServerError, dto.Envelope{"error": http.StatusText(http.StatusInternalServerError)})
+		helpers.WriteJSON(w, http.StatusInternalServerError, dto.ResponseWrapper{"error": http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 

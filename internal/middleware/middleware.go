@@ -113,24 +113,16 @@ func (s *MiddlewareService) Authorization(h http.Handler) http.Handler {
 
 		var token, userID string
 		if errors.Is(err, http.ErrNoCookie) {
-			token, userID, err = s.jwtService.CreateToken()
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
+			token, userID, err = s.jwtService.CreateOrValidateToken("")
 		} else {
-			token, userID, err = s.jwtService.ValidateToken(cookie.Value)
-			if err != nil {
-				if errors.Is(err, errs.ErrNotAuthorized) {
-					http.Error(w, err.Error(), http.StatusUnauthorized)
-					return
-				}
-
-				if errors.Is(err, errs.ErrUnexpectedSigningMethod) {
-					http.Error(w, err.Error(), http.StatusUnauthorized)
-					return
-				}
-
+			token, userID, err = s.jwtService.CreateOrValidateToken(cookie.Value)
+		}
+		if err != nil {
+			switch {
+			case errors.Is(err, errs.ErrNotAuthorized), errors.Is(err, errs.ErrUnexpectedSigningMethod):
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			default:
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}

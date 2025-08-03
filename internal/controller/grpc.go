@@ -23,7 +23,10 @@ func (c Controller) CreateGRPC(
 		return nil, status.Errorf(codes.InvalidArgument, "original url is not a url")
 	}
 
-	pair := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	pair, ok := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	if !ok {
+		return nil, status.Error(codes.FailedPrecondition, "user id not found in context")
+	}
 
 	shortURL, err := c.storage.CreateShortURL(ctx, pair.UserID, "", url)
 	if err != nil {
@@ -61,7 +64,10 @@ func (c Controller) CreateBatchGRPC(
 		req = append(req, temp)
 	}
 
-	pair := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	pair, ok := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	if !ok {
+		return nil, status.Error(codes.FailedPrecondition, "user id not found in context")
+	}
 
 	resp, err := c.storage.BatchCreateShortURL(ctx, pair.UserID, "", req)
 	if err != nil {
@@ -151,7 +157,10 @@ func (c Controller) DeleteGRPC(
 	in *pb.DeleteShortURLRequest) (*pb.DeleteShortURLResponse, error) {
 	var response pb.DeleteShortURLResponse
 
-	pair := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	pair, ok := ctx.Value(contextI.UserIDContextKey).(interceptor.TokenPair)
+	if !ok {
+		return nil, status.Error(codes.FailedPrecondition, "user id not found in context")
+	}
 
 	err := c.storage.DeleteURLs(ctx, pair.UserID, in.ShortUrls)
 	if err != nil {

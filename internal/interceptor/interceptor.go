@@ -76,24 +76,24 @@ func (s Service) Auth(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
 	var err error
 
 	tokens := md.Get("Access-token")
+
 	if len(tokens) == 0 {
-		token, userID, err = s.jwtService.CreateToken()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to create token")
-		}
+		token, userID, err = s.jwtService.CreateOrValidateToken("")
 	} else {
 		token, userID, err = s.jwtService.ValidateToken(tokens[0])
-		if err != nil {
-			if errors.Is(err, errs.ErrNotAuthorized) || errors.Is(err, errs.ErrUnexpectedSigningMethod) {
-				return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
-			}
-
-			return nil, status.Errorf(codes.Internal, "token validation failed")
+	}
+	if err != nil {
+		switch {
+		case errors.Is(err, errs.ErrNotAuthorized), errors.Is(err, errs.ErrUnexpectedSigningMethod):
+			return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
+		case errors.Is(err, errs.ErrSigningToken):
+			return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		case errors.Is(err, errs.ErrRefreshingToken):
+			return nil, status.Errorf(codes.Internal, "%s", err.Error())
+		default:
+			return nil, status.Errorf(codes.Internal, "%s", err.Error())
 		}
 	}
-
-	header := metadata.Pairs("set-access-token", token)
-	grpc.SetHeader(ctx, header)
 
 	data := TokenPair{
 		AccessToken: token,

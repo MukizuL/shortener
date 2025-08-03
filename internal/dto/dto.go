@@ -1,6 +1,6 @@
 package dto
 
-type Envelope map[string]interface{}
+type ResponseWrapper map[string]interface{}
 
 // Request represents a URL shortening request.
 type Request struct {

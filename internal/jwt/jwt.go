@@ -17,6 +17,7 @@ type JWTServiceInterface interface {
 	ValidateToken(token string) (string, string, error)
 	CreateToken() (string, string, error)
 	RefreshToken(userID string) (string, error)
+	CreateOrValidateToken(token string) (string, string, error)
 }
 
 type JWTService struct {
@@ -91,4 +92,23 @@ func (s *JWTService) RefreshToken(userID string) (string, error) {
 	}
 
 	return accessTokenSigned, nil
+}
+
+// CreateOrValidateToken high level function to validate a token or create a new user if no token provided.
+func (s *JWTService) CreateOrValidateToken(token string) (string, string, error) {
+	if token == "" {
+		newToken, userID, err := s.CreateToken()
+		if err != nil {
+			return "", "", err
+		}
+
+		return newToken, userID, nil
+	} else {
+		newToken, userID, err := s.ValidateToken(token)
+		if err != nil {
+			return "", "", err
+		}
+
+		return newToken, userID, nil
+	}
 }

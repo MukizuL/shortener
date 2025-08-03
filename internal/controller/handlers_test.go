@@ -417,7 +417,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  201,
-				response:    dto.Envelope{"result": "http://localhost:8080/qxDvSD"},
+				response:    dto.ResponseWrapper{"result": "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
@@ -431,7 +431,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  409,
-				response:    dto.Envelope{"result": "http://localhost:8080/qxDvSD"},
+				response:    dto.ResponseWrapper{"result": "http://localhost:8080/qxDvSD"},
 			},
 		},
 		{
@@ -443,7 +443,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
-				response:    dto.Envelope{"error": "URL https:// is unprocessable"},
+				response:    dto.ResponseWrapper{"error": "URL https:// is unprocessable"},
 			},
 		},
 		{
@@ -455,7 +455,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
-				response:    dto.Envelope{"error": "URL www.something.ru is unprocessable"},
+				response:    dto.ResponseWrapper{"error": "URL www.something.ru is unprocessable"},
 			},
 		},
 		{
@@ -467,7 +467,7 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  422,
-				response:    dto.Envelope{"error": "URL  is unprocessable"},
+				response:    dto.ResponseWrapper{"error": "URL  is unprocessable"},
 			},
 		},
 	}
@@ -509,15 +509,15 @@ func TestApplication_CreateShortURLJSON(t *testing.T) {
 
 			switch tt.want.statusCode {
 			case http.StatusCreated, http.StatusConflict:
-				var resp dto.Envelope
+				var resp dto.ResponseWrapper
 				err = json.Unmarshal(body, &resp)
 				require.NoError(t, err)
-				assert.Equal(t, tt.want.response.(dto.Envelope)["result"], resp["result"])
+				assert.Equal(t, tt.want.response.(dto.ResponseWrapper)["result"], resp["result"])
 			default:
-				var errResp dto.Envelope
+				var errResp dto.ResponseWrapper
 				err = json.Unmarshal(body, &errResp)
 				require.NoError(t, err)
-				assert.Equal(t, tt.want.response.(dto.Envelope)["error"], errResp["error"])
+				assert.Equal(t, tt.want.response.(dto.ResponseWrapper)["error"], errResp["error"])
 			}
 		})
 	}
@@ -611,7 +611,7 @@ func TestApplication_BatchCreateShortURLJSON(t *testing.T) {
 			want: want{
 				contentType: "application/json",
 				statusCode:  500,
-				response:    dto.Envelope{"error": "Internal Server Error"},
+				response:    dto.ResponseWrapper{"error": "Internal Server Error"},
 			},
 		},
 	}
@@ -657,10 +657,10 @@ func TestApplication_BatchCreateShortURLJSON(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.want.response.([]dto.BatchResponse), resp)
 			case http.StatusInternalServerError:
-				var errResp dto.Envelope
+				var errResp dto.ResponseWrapper
 				err = json.NewDecoder(result.Body).Decode(&errResp)
 				require.NoError(t, err)
-				assert.Equal(t, tt.want.response.(dto.Envelope)["error"], errResp["error"])
+				assert.Equal(t, tt.want.response.(dto.ResponseWrapper)["error"], errResp["error"])
 			}
 
 			err = result.Body.Close()

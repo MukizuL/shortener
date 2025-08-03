@@ -29,6 +29,7 @@ type GRPCFxIn struct {
 
 func newGRPCServer(in GRPCFxIn) (*grpc.Server, error) {
 	if in.Cfg.GRPCPort == "" {
+		in.Logger.Info("GRPC server is disabled")
 		return nil, nil
 	}
 
