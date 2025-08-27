@@ -1,18 +1,10 @@
 package dto
 
+type ResponseWrapper map[string]interface{}
+
 // Request represents a URL shortening request.
 type Request struct {
 	FullURL string `json:"url"`
-}
-
-// Response represents a successful URL shortening response.
-type Response struct {
-	Result string `json:"result"`
-}
-
-// ErrorResponse represents an error response.
-type ErrorResponse struct {
-	Err string `json:"error"`
 }
 
 // BatchRequest represents a batch URL shortening request item.
@@ -31,4 +23,10 @@ type BatchResponse struct {
 type URLPair struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
+}
+
+// Stats provides info on how many shortURLs and users in the system.
+type Stats struct {
+	Urls  int `json:"urls"`
+	Users int `json:"users"`
 }

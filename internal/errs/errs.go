@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	ErrDuplicate               = errors.New("duplicate URL")
-	ErrURLNotFound             = errors.New("URL is not present")
+	ErrURLNotFound             = errors.New("url is not present")
 	ErrInternalServerError     = errors.New("internal server error")
 	ErrNotAuthorized           = errors.New("invalid token")
 	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")

@@ -27,7 +27,7 @@ func TestApplication_Authorization(t *testing.T) {
 		{
 			name: "success with existing valid token",
 			mockSetup: func(m *mockjwt.MockJWTServiceInterface) {
-				m.EXPECT().ValidateToken("valid-token").Return("new-token", "user1", nil)
+				m.EXPECT().CreateOrValidateToken("valid-token").Return("new-token", "user1", nil)
 			},
 			cookiePresent: true,
 			cookieValue:   "valid-token",
@@ -37,7 +37,7 @@ func TestApplication_Authorization(t *testing.T) {
 		{
 			name: "success with new token creation",
 			mockSetup: func(m *mockjwt.MockJWTServiceInterface) {
-				m.EXPECT().CreateToken().Return("new-token", "user2", nil)
+				m.EXPECT().CreateOrValidateToken("").Return("new-token", "user2", nil)
 			},
 			cookiePresent: false,
 			wantStatus:    http.StatusOK,
@@ -46,7 +46,7 @@ func TestApplication_Authorization(t *testing.T) {
 		{
 			name: "error validating token",
 			mockSetup: func(m *mockjwt.MockJWTServiceInterface) {
-				m.EXPECT().ValidateToken("invalid-token").Return("", "", errs.ErrNotAuthorized)
+				m.EXPECT().CreateOrValidateToken("invalid-token").Return("", "", errs.ErrNotAuthorized)
 			},
 			cookiePresent: true,
 			cookieValue:   "invalid-token",
@@ -56,7 +56,7 @@ func TestApplication_Authorization(t *testing.T) {
 		{
 			name: "error creating token",
 			mockSetup: func(m *mockjwt.MockJWTServiceInterface) {
-				m.EXPECT().CreateToken().Return("", "", errors.New("error"))
+				m.EXPECT().CreateOrValidateToken("").Return("", "", errors.New("error"))
 			},
 			cookiePresent: false,
 			wantStatus:    http.StatusInternalServerError,

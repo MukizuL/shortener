@@ -39,6 +39,22 @@ func (m *MockJWTServiceInterface) EXPECT() *MockJWTServiceInterfaceMockRecorder 
 	return m.recorder
 }
 
+// CreateOrValidateToken mocks base method.
+func (m *MockJWTServiceInterface) CreateOrValidateToken(token string) (string, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrValidateToken", token)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateOrValidateToken indicates an expected call of CreateOrValidateToken.
+func (mr *MockJWTServiceInterfaceMockRecorder) CreateOrValidateToken(token any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrValidateToken", reflect.TypeOf((*MockJWTServiceInterface)(nil).CreateOrValidateToken), token)
+}
+
 // CreateToken mocks base method.
 func (m *MockJWTServiceInterface) CreateToken() (string, string, error) {
 	m.ctrl.T.Helper()

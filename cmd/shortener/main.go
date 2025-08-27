@@ -7,8 +7,10 @@ import (
 	"net/http"
 
 	"github.com/MukizuL/shortener/internal/controller"
+	"github.com/MukizuL/shortener/internal/interceptor"
 	"github.com/MukizuL/shortener/internal/migration"
 	"go.uber.org/fx/fxevent"
+	"google.golang.org/grpc"
 
 	"github.com/MukizuL/shortener/internal/config"
 	jwtService "github.com/MukizuL/shortener/internal/jwt"
@@ -46,7 +48,7 @@ func main() {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 		createApp(),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(*http.Server, *grpc.Server) {}),
 	).Run()
 }
 
@@ -59,6 +61,7 @@ func createApp() fx.Option {
 		router.Provide(),
 		server.Provide(),
 		jwtService.Provide(),
+		interceptor.Provide(),
 
 		pgstorage.Provide(),
 		mapstorage.Provide(),
